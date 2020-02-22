@@ -1,0 +1,16 @@
+import "CameraRGBDSimple.idsl";
+import "CameraRGBDSimplePub.idsl";
+import "AprilTagsServer.idsl";
+import "YoloServer.idsl";
+
+Component camerayoloVREP
+{
+    Communications
+    {
+        requires AprilTagsServer, YoloServer;
+        implements CameraRGBDSimple;
+        publishes CameraRGBDSimplePub;
+    };
+	language python;
+};
+
