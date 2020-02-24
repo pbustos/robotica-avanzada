@@ -35,9 +35,10 @@ class SpecificWorker(GenericWorker):
 		self.t_image = RoboCompCameraRGBDSimple.TImage()
 		self.t_depth = TDepth()
 		self.timer.timeout.connect(self.compute)
-		self.Period = 200
+		self.Period = 50
 		self.timer.start(self.Period)
 		self.contFPS = 0
+		self.incs = [0,0,0]
 
 	def __del__(self):
 		print('SpecificWorker destructor')
@@ -95,27 +96,25 @@ class SpecificWorker(GenericWorker):
 			self.contFPS = 0
 		self.contFPS += 1
 
-		self.gotoPose()
-
+		if any(np.abs(self.incs) > 0.01):
+			self.gotoPose(self.incs)
+		#self.incs = [0,0,0]
+		
 		return True
 
 ###################################################################################################
-	def gotoPose(self):
+	def gotoPose(self, incs):
 		
 		succ, pose = self.client.simxGetObjectPosition(self.target, -1, self.client.simxServiceCall())
-		new_pose = [p - 0.005 for p in pose]
-		print(pose)
+		#print(pose)
+		new_pose = [(0.01*incs[i])+pose[i] for i in range(len(pose))]
+		#print(new_pose)
 		self.client.simxSetObjectPosition(self.target, -1, new_pose, self.client.simxServiceCall())
-		self.count += 1
-		if self.count == 10:
-			self.goHigh()
-			self.count = 0
-
+		
 	def goHome(self):
 		home = [-2.1890029907226562, -1.8270002603530884, 0.9950007200241089]
 		self.client.simxSetObjectPosition(self.target, -1, home, self.client.simxServiceCall())
 		
-
 	def goHigh(self):
 		home = [-2.1890029907226562, -1.8270002603530884, 1.3]
 		self.client.simxSetObjectPosition(self.target, -1, home, self.client.simxServiceCall())
@@ -190,6 +189,16 @@ class SpecificWorker(GenericWorker):
 		return self.t_depth
 
 # ===================================================================
+	#
+	# SUBSCRIPTON to sendData from JoystickAdapter
+	#
+	def JoystickAdapter_sendData(self, data):
+		#print(data)
+		x = [axis.value for axis in data.axes if axis.name == "x"][0]
+		y = [axis.value for axis in data.axes if axis.name == "y"][0]
+		z = [axis.value for axis in data.axes if axis.name == "z"][0]
+		self.incs = [-x, -y, z]
+
 # ===================================================================
 
 

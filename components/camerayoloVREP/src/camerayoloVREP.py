@@ -121,7 +121,7 @@ if __name__ == '__main__':
 		proxyString = ic.getProperties().getProperty('AprilTagsServerProxy')
 		try:
 			basePrx = ic.stringToProxy(proxyString)
-			apriltagsserver_proxy = AprilTagsServerPrx.uncheckedCast(basePrx)
+			apriltagsserver_proxy = AprilTagsServerPrx.checkedCast(basePrx)
 			mprx["AprilTagsServerProxy"] = apriltagsserver_proxy
 		except Ice.Exception:
 			print('Cannot connect to the remote object (AprilTagsServer)', proxyString)
@@ -138,7 +138,7 @@ if __name__ == '__main__':
 		proxyString = ic.getProperties().getProperty('YoloServerProxy')
 		try:
 			basePrx = ic.stringToProxy(proxyString)
-			yoloserver_proxy = YoloServerPrx.uncheckedCast(basePrx)
+			yoloserver_proxy = YoloServerPrx.checkedCast(basePrx)
 			mprx["YoloServerProxy"] = yoloserver_proxy
 		except Ice.Exception:
 			print('Cannot connect to the remote object (YoloServer)', proxyString)
@@ -178,6 +178,29 @@ if __name__ == '__main__':
 	adapter = ic.createObjectAdapter('CameraRGBDSimple')
 	adapter.add(CameraRGBDSimpleI(worker), ic.stringToIdentity('camerargbdsimple'))
 	adapter.activate()
+
+
+	JoystickAdapter_adapter = ic.createObjectAdapter("JoystickAdapterTopic")
+	joystickadapterI_ = JoystickAdapterI(worker)
+	joystickadapter_proxy = JoystickAdapter_adapter.addWithUUID(joystickadapterI_).ice_oneway()
+
+	subscribeDone = False
+	while not subscribeDone:
+		try:
+			joystickadapter_topic = topicManager.retrieve("JoystickAdapter")
+			subscribeDone = True
+		except Ice.Exception as e:
+			print("Error. Topic does not exist (creating)")
+			time.sleep(1)
+			try:
+				joystickadapter_topic = topicManager.create("JoystickAdapter")
+				subscribeDone = True
+			except:
+				print("Error. Topic could not be created. Exiting")
+				status = 0
+	qos = {}
+	joystickadapter_topic.subscribeAndGetPublisher(qos, joystickadapter_proxy)
+	JoystickAdapter_adapter.activate()
 
 
 	signal.signal(signal.SIGINT, sigint_handler)

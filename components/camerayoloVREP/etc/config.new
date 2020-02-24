@@ -2,6 +2,10 @@
 CameraRGBDSimple.Endpoints=tcp -p 0
 
 
+# Endpoints for subscriptions
+JoystickAdapterTopic.Endpoints=tcp -p 0
+
+
 # Proxies for required interfaces
 AprilTagsServerProxy = apriltagsserver:tcp -h localhost -p 0
 YoloServerProxy = yoloserver:tcp -h localhost -p 0

@@ -56,18 +56,18 @@ if not ice_CameraRGBDSimple:
 	print('Couln\'t load CameraRGBDSimple')
 	sys.exit(-1)
 from RoboCompCameraRGBDSimple import *
-ice_CameraRGBDSimplePub = False
+ice_JoystickAdapter = False
 for p in icePaths:
-	if os.path.isfile(p+'/CameraRGBDSimplePub.ice'):
+	if os.path.isfile(p+'/JoystickAdapter.ice'):
 		preStr = "-I/opt/robocomp/interfaces/ -I"+ROBOCOMP+"/interfaces/ " + additionalPathStr + " --all "+p+'/'
-		wholeStr = preStr+"CameraRGBDSimplePub.ice"
+		wholeStr = preStr+"JoystickAdapter.ice"
 		Ice.loadSlice(wholeStr)
-		ice_CameraRGBDSimplePub = True
+		ice_JoystickAdapter = True
 		break
-if not ice_CameraRGBDSimplePub:
-	print('Couln\'t load CameraRGBDSimplePub')
+if not ice_JoystickAdapter:
+	print('Couln\'t load JoystickAdapter')
 	sys.exit(-1)
-from RoboCompCameraRGBDSimplePub import *
+from RoboCompJoystickAdapter import *
 ice_AprilTagsServer = False
 for p in icePaths:
 	if os.path.isfile(p+'/AprilTagsServer.ice'):
@@ -92,9 +92,22 @@ if not ice_YoloServer:
 	print('Couln\'t load YoloServer')
 	sys.exit(-1)
 from RoboCompYoloServer import *
+ice_CameraRGBDSimplePub = False
+for p in icePaths:
+	if os.path.isfile(p+'/CameraRGBDSimplePub.ice'):
+		preStr = "-I/opt/robocomp/interfaces/ -I"+ROBOCOMP+"/interfaces/ " + additionalPathStr + " --all "+p+'/'
+		wholeStr = preStr+"CameraRGBDSimplePub.ice"
+		Ice.loadSlice(wholeStr)
+		ice_CameraRGBDSimplePub = True
+		break
+if not ice_CameraRGBDSimplePub:
+	print('Couln\'t load CameraRGBDSimplePub')
+	sys.exit(-1)
+from RoboCompCameraRGBDSimplePub import *
 
 
 from camerargbdsimpleI import *
+from joystickadapterI import *
 
 
 class GenericWorker(QtCore.QObject):

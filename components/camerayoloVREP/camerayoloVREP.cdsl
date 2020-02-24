@@ -2,6 +2,7 @@ import "CameraRGBDSimple.idsl";
 import "CameraRGBDSimplePub.idsl";
 import "AprilTagsServer.idsl";
 import "YoloServer.idsl";
+import "JoystickAdapter.idsl";
 
 Component camerayoloVREP
 {
@@ -10,6 +11,7 @@ Component camerayoloVREP
         requires AprilTagsServer, YoloServer;
         implements CameraRGBDSimple;
         publishes CameraRGBDSimplePub;
+        subscribesTo JoystickAdapter;
     };
 	language python;
 };

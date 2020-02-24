@@ -3,10 +3,13 @@ CameraRGBDSimple.Endpoints=tcp -p 10178
 
 YoloServerProxy = yoloserver:tcp -h localhost -p 11010
 
+# Endpoints for subscriptions
+JoystickAdapterTopic.Endpoints=tcp -p 16000
+
 cameraid=1
 display=true
 callapriltags=false
-yolo = true
+yolo = false
 # This property is used by the clients to connect to IceStorm.
 TopicManager.Proxy=IceStorm/TopicManager:default -p 9999
 
