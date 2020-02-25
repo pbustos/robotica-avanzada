@@ -1,0 +1,9 @@
+Component armControler
+{
+    Communications
+    {
+    };
+	language python;
+	statemachine "statemachine.smdsl";
+};
+
