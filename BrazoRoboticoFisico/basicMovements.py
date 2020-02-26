@@ -9,10 +9,40 @@ import threading
 #import api kortex
 from kortex_api.autogen.client_stubs.BaseClientRpc import BaseClient
 from kortex_api.autogen.client_stubs.BaseCyclicClientRpc import BaseCyclicClient
-from kortex_api.autogen.messages import Base_pb2, BaseCyclic_pb2, Common_pb2
+from kortex_api.autogen.messages import Base_pb2, BaseCyclic_pb2, Common_pb2, Session_pb2
+from kortex_api.TCPTransport import TCPTransport
+from kortex_api.RouterClient import RouterClient
+from kortex_api.SessionManager import SessionManager
+from kortex_api.autogen.client_stubs.DeviceConfigClientRpc import DeviceConfigClient
 
 # Maximum allowed waiting time during actions (in seconds)
 TIMEOUT_DURATION = 20
+
+def connect():
+    error_callback = lambda kException: print("_________ callback error _________ {}".format(kException))
+    transport = TCPTransport()
+    router = RouterClient(transport, error_callback)
+    transport.connect('192.168.1.10', 10000)
+
+    # Create session
+    session_info = Session_pb2.CreateSessionInfo()
+    session_info.username = "admin"
+    session_info.password = "admin"
+    session_info.session_inactivity_timeout = 60000   # (milliseconds)
+    session_info.connection_inactivity_timeout = 2000 # (milliseconds)
+
+    print("Creating session for communication")
+    session_manager = SessionManager(router)
+    session_manager.CreateSession(session_info)
+    print("Session created")
+
+    return router, transport, session_manager
+
+def disconnect(session_manager, transport):
+    # Close API session
+    session_manager.CloseSession()
+    # Disconnect from the transport object
+    transport.disconnect()
 
 # Create closure to set an event after an END or an ABORT
 def check_for_end_or_abort(e):
@@ -30,7 +60,7 @@ def check_for_end_or_abort(e):
             e.set()
     return check
 
-def cartesian_Home_movement(base, base_cyclic):
+def cartesian_Position_movement(base, base_cyclic, typeMovement):
     
     print("Starting Cartesian Home Movement ...")
     action = Base_pb2.Action()
@@ -38,46 +68,24 @@ def cartesian_Home_movement(base, base_cyclic):
     action.application_data = ""
 
     cartesian_pose = action.reach_pose.target_pose
-    cartesian_pose.x =  0.35 # (meters)
-    cartesian_pose.y =  0.040 # (meters)
-    cartesian_pose.z =  0.40 # (meters)
-    cartesian_pose.theta_x =  180.0 # (degrees)
-    cartesian_pose.theta_y =  0.0 # (degrees)
-    cartesian_pose.theta_z = 90.0 # (degrees)
-
-    e = threading.Event()
-    notification_handle = base.OnNotificationActionTopic(
-        check_for_end_or_abort(e),
-        Base_pb2.NotificationOptions()
-    )
-
-    print("Executing action")
-    base.ExecuteAction(action)
-
-    print("Waiting for movement to finish ...")
-    finished = e.wait(TIMEOUT_DURATION)
-    base.Unsubscribe(notification_handle)
-
-    if finished:
-        print("Cartesian movement completed")
+    # home position
+    if typeMovement == 0:
+        cartesian_pose.x =  0.35 # (meters)
+        cartesian_pose.y =  0.040 # (meters)
+        cartesian_pose.z =  0.40 # (meters)
+        cartesian_pose.theta_x =  180.0 # (degrees)
+        cartesian_pose.theta_y =  0.0 # (degrees)
+        cartesian_pose.theta_z = 90.0 # (degrees)
+    # paronamic view
+    elif typeMovement == 1:
+        cartesian_pose.x =  0.380 # (meters)
+        cartesian_pose.y =  0.036 # (meters)
+        cartesian_pose.z =  0.560 # (meters)
+        cartesian_pose.theta_x =  -180.0 # (degrees)
+        cartesian_pose.theta_y =  0.0 # (degrees)
+        cartesian_pose.theta_z = 90.0 # (degrees)
     else:
-        print("Timeout on action notification wait")
-    return finished
-
-def cartesian_ParonamicView_movement(base, base_cyclic):
-    
-    print("Starting Cartesian Home Movement ...")
-    action = Base_pb2.Action()
-    action.name = "Cartesian Home movement"
-    action.application_data = ""
-
-    cartesian_pose = action.reach_pose.target_pose
-    cartesian_pose.x =  0.380 # (meters)
-    cartesian_pose.y =  0.036 # (meters)
-    cartesian_pose.z =  0.560 # (meters)
-    cartesian_pose.theta_x =  -180.0 # (degrees)
-    cartesian_pose.theta_y =  0.0 # (degrees)
-    cartesian_pose.theta_z = 90.0 # (degrees)
+        print("No esta definido ese moviento")
 
     e = threading.Event()
     notification_handle = base.OnNotificationActionTopic(

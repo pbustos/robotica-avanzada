@@ -30,17 +30,11 @@ import threading
 #import api kortex
 from kortex_api.autogen.client_stubs.BaseClientRpc import BaseClient
 from kortex_api.autogen.client_stubs.BaseCyclicClientRpc import BaseCyclicClient
-from kortex_api.autogen.messages import Base_pb2, BaseCyclic_pb2, Common_pb2
-
-
+from kortex_api.autogen.messages import Base_pb2, BaseCyclic_pb2, Common_pb2, DeviceConfig_pb2, Session_pb2
 from kortex_api.TCPTransport import TCPTransport
 from kortex_api.RouterClient import RouterClient
 from kortex_api.SessionManager import SessionManager
-
 from kortex_api.autogen.client_stubs.DeviceConfigClientRpc import DeviceConfigClient
-from kortex_api.autogen.client_stubs.BaseClientRpc import BaseClient
-
-from kortex_api.autogen.messages import DeviceConfig_pb2, Session_pb2, Base_pb2
 
 # Import the utilities helper module
 sys.path.append('/utilities')
@@ -49,8 +43,6 @@ import utilities
 #import librerias creadas
 sys.path.append('/basicMovements')
 import basicMovements as bM
-
-import argparse
 
 # If RoboComp was compiled with Python bindings you can use InnerModel in Python
 # sys.path.append('/opt/robocomp/lib')
@@ -67,33 +59,18 @@ class SpecificWorker(GenericWorker):
 		self.defaultMachine.start()
 		self.destroyed.connect(self.t_compute_to_finalize)
 		
-		error_callback = lambda kException: print("_________ callback error _________ {}".format(kException))
-		transport = TCPTransport()
-		router = RouterClient(transport, error_callback)
-		transport.connect('192.168.1.10', 10000)
-
-		# Create session
-		session_info = Session_pb2.CreateSessionInfo()
-		session_info.username = "admin"
-		session_info.password = "admin"
-		session_info.session_inactivity_timeout = 60000   # (milliseconds)
-		session_info.connection_inactivity_timeout = 2000 # (milliseconds)
-
-		print("Creating session for communication")
-		session_manager = SessionManager(router)
-		session_manager.CreateSession(session_info)
-		print("Session created")
-
+		# connect
+		self.router, self.transport, self.session_manager = bM.connect()
 		# Create required services
-		self.device_config = DeviceConfigClient(router)
-		self.base = BaseClient(router)
-		self.base_cyclic = BaseCyclicClient(router)
-
-
-
+		self.device_config = DeviceConfigClient(self.router)
+		self.base = BaseClient(self.router)
+		self.base_cyclic = BaseCyclicClient(self.router)
 
 	def __del__(self):
 		print('SpecificWorker destructor')
+		
+		# disconnect
+		bM.disconnect(self.session_manager, self.transport)
 
 	def setParams(self, params):
 		#try:
@@ -110,10 +87,11 @@ class SpecificWorker(GenericWorker):
 		# Example core
 		success = True
 
-		success &= bM.cartesian_Home_movement(self.base, self.base_cyclic)
+		success &= bM.cartesian_Define_movement(self.base, self.base_cyclic, 0)
 		print("Move Home \n")
 
-		success&= bM.cartesian_ParonamicView_movement(self.base, self.base_cyclic)
+		success &= bM.cartesian_Define_movement(self.base, self.base_cyclic, 1)
+		print("Move Home \n")
 
 		success &= bM.cartesian_Especific_movement(self.base, self.base_cyclic, 0.57, 0.0, 0.43, 90.0, 0, 90)
 		print("Move Home Robot KINOVA\n")
