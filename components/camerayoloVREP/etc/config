@@ -9,7 +9,7 @@ JoystickAdapterTopic.Endpoints=tcp -p 16000
 cameraid=1
 display=true
 callapriltags=false
-yolo = false
+yolo = true
 # This property is used by the clients to connect to IceStorm.
 TopicManager.Proxy=IceStorm/TopicManager:default -p 9999
 
