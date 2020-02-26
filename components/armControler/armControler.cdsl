@@ -1,9 +1,11 @@
+import "JoystickAdapter.idsl";
 Component armControler
 {
     Communications
     {
+        subscribesTo JoystickAdapter;
     };
 	language python;
-	statemachine "statemachine.smdsl";
+    statemachine "statemachine.smdsl";
 };
 

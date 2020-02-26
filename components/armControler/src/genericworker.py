@@ -44,8 +44,21 @@ except:
 	print('SLICE_PATH environment variable was not exported. Using only the default paths')
 	pass
 
+ice_JoystickAdapter = False
+for p in icePaths:
+	if os.path.isfile(p+'/JoystickAdapter.ice'):
+		preStr = "-I/opt/robocomp/interfaces/ -I"+ROBOCOMP+"/interfaces/ " + additionalPathStr + " --all "+p+'/'
+		wholeStr = preStr+"JoystickAdapter.ice"
+		Ice.loadSlice(wholeStr)
+		ice_JoystickAdapter = True
+		break
+if not ice_JoystickAdapter:
+	print('Couln\'t load JoystickAdapter')
+	sys.exit(-1)
+from RoboCompJoystickAdapter import *
 
 
+from joystickadapterI import *
 
 
 class GenericWorker(QtCore.QObject):

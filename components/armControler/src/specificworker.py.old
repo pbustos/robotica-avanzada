@@ -26,7 +26,6 @@ import sys
 import os
 import time
 import threading
-import cv2
 
 #import api kortex
 from kortex_api.autogen.client_stubs.BaseClientRpc import BaseClient
@@ -56,10 +55,7 @@ class SpecificWorker(GenericWorker):
 		super(SpecificWorker, self).__init__(proxy_map)
 		self.Period = 2000
 		self.timer.start(self.Period)
-
-		self.defaultMachine.start()
-		self.destroyed.connect(self.t_compute_to_finalize)
-
+		
 		# connect
 		self.router, self.transport, self.session_manager = bM.connect()
 		# Create required services
@@ -68,10 +64,6 @@ class SpecificWorker(GenericWorker):
 		self.base_cyclic = BaseCyclicClient(self.router)
 
 		self.joystickVector = {'x':0, 'y':0, 'z':0}
-		bM.cartesian_Position_movement(self.base, self.base_cyclic, 0)
-
-		#video capture
-		self.video_capture = cv2.VideoCapture('rtsp://192.168.1.10/color')
 
 	def __del__(self):
 		print('SpecificWorker destructor')
@@ -84,68 +76,17 @@ class SpecificWorker(GenericWorker):
 	@QtCore.Slot()
 	def compute(self):
 		print('SpecificWorker.compute...')
-		#bM.cartesian_Relative_movement(self.base, self.base_cyclic, self.joystickVector['x'], self.joystickVector['y'], self.joystickVector['z'], 0, 0, 0)
 		
-		ret, frame = self.video_capture.read()
-		# Display the resulting frame
-		cv2.imshow('Video', frame)
-
+		bM.cartesian_Position_movement(self.base, self.base_cyclic, 0)
+		bM.cartesian_Relative_movement(self.base, self.base_cyclic, self.joystickVector['x'],
+		self.joystickVector['y'], self.joystickVector['z'], 0, 0, 0)
+		time.sleep(100)
 		return True
-
-# =============== Slots methods for State Machine ===================
-# ===================================================================
-	#
-	# sm_initialize
-	#
-	@QtCore.Slot()
-	def sm_initialize(self):
-		print("Entered state initialize")
-		self.t_initialize_to_compute.emit()
-		pass
-
-	#
-	# sm_compute
-	#
-	@QtCore.Slot()
-	def sm_compute(self):
-		print("Entered state compute")
-		self.compute()
-		pass
-
-	#
-	# sm_finalize
-	#
-	@QtCore.Slot()
-	def sm_finalize(self):
-		print("Entered state finalize")
-		pass
-
-
-# =================================================================
-# =================================================================
 	#
 	# sendData
 	#
 	def JoystickAdapter_sendData(self, data):
-		if hasattr(data,"buttons") and data.buttons[0].clicked == True:
-				self.joystickVector['x'] = 0
-				self.joystickVector['y'] = 0
-				self.joystickVector['z'] = 0
-				bM.cartesian_Position_movement(self.base, self.base_cyclic, 0)
-		else: 
-			if abs([axis.value for axis in data.axes if axis.name == "x"][0]) < 0.3:
-				self.joystickVector['x'] = 0
-			else:
-				self.joystickVector['x'] = [axis.value for axis in data.axes if axis.name == "x"][0] / 10.0
-			
-			if abs([axis.value for axis in data.axes if axis.name == "y"][0]) < 0.3:
-				self.joystickVector['y'] = 0
-			else:
-				self.joystickVector['y'] = [axis.value for axis in data.axes if axis.name == "y"][0] / 10.0 
-			
-			if abs([axis.value for axis in data.axes if axis.name == "z"][0]) < 0.3:
-				self.joystickVector['z'] = 0
-			else:
-				self.joystickVector['z'] = [axis.value for axis in data.axes if axis.name == "z"][0] / 10.0
-
+		self.joystickVector['x'] = [axis.value for axis in data.axes if axis.name == "x"][0] / 10.0
+		self.joystickVector['y'] = [axis.value for axis in data.axes if axis.name == "y"][0] / 10.0 
+		self.joystickVector['z'] = [axis.value for axis in data.axes if axis.name == "z"][0] / 10.0
 

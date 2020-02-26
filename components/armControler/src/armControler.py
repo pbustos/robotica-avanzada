@@ -106,12 +106,44 @@ if __name__ == '__main__':
 	parameters = {}
 	for i in ic.getProperties():
 		parameters[str(i)] = str(ic.getProperties().getProperty(i))
+
+	# Topic Manager
+	proxy = ic.getProperties().getProperty("TopicManager.Proxy")
+	obj = ic.stringToProxy(proxy)
+	try:
+		topicManager = IceStorm.TopicManagerPrx.checkedCast(obj)
+	except Ice.ConnectionRefusedException as e:
+		print('Cannot connect to IceStorm! ('+proxy+')')
+		status = 1
 	if status == 0:
 		worker = SpecificWorker(mprx)
 		worker.setParams(parameters)
 	else:
 		print("Error getting required connections, check config file")
 		sys.exit(-1)
+
+	JoystickAdapter_adapter = ic.createObjectAdapter("JoystickAdapterTopic")
+	joystickadapterI_ = JoystickAdapterI(worker)
+	joystickadapter_proxy = JoystickAdapter_adapter.addWithUUID(joystickadapterI_).ice_oneway()
+
+	subscribeDone = False
+	while not subscribeDone:
+		try:
+			joystickadapter_topic = topicManager.retrieve("JoystickAdapter")
+			subscribeDone = True
+		except Ice.Exception as e:
+			print("Error. Topic does not exist (creating)")
+			time.sleep(1)
+			try:
+				joystickadapter_topic = topicManager.create("JoystickAdapter")
+				subscribeDone = True
+			except:
+				print("Error. Topic could not be created. Exiting")
+				status = 0
+	qos = {}
+	joystickadapter_topic.subscribeAndGetPublisher(qos, joystickadapter_proxy)
+	JoystickAdapter_adapter.activate()
+
 
 	signal.signal(signal.SIGINT, sigint_handler)
 	app.exec_()
