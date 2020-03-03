@@ -44,6 +44,18 @@ except:
 	print('SLICE_PATH environment variable was not exported. Using only the default paths')
 	pass
 
+ice_YoloServer = False
+for p in icePaths:
+	if os.path.isfile(p+'/YoloServer.ice'):
+		preStr = "-I/opt/robocomp/interfaces/ -I"+ROBOCOMP+"/interfaces/ " + additionalPathStr + " --all "+p+'/'
+		wholeStr = preStr+"YoloServer.ice"
+		Ice.loadSlice(wholeStr)
+		ice_YoloServer = True
+		break
+if not ice_YoloServer:
+	print('Couln\'t load YoloServer')
+	sys.exit(-1)
+from RoboCompYoloServer import *
 ice_JoystickAdapter = False
 for p in icePaths:
 	if os.path.isfile(p+'/JoystickAdapter.ice'):
@@ -75,6 +87,7 @@ class GenericWorker(QtCore.QObject):
 		super(GenericWorker, self).__init__()
 
 
+		self.yoloserver_proxy = mprx["YoloServerProxy"]
 
 		
 		self.mutex = QtCore.QMutex(QtCore.QMutex.Recursive)

@@ -1,8 +1,10 @@
 import "JoystickAdapter.idsl";
+import "YoloServer.idsl";
 Component armControler
 {
     Communications
     {
+        requires YoloServer;
         subscribesTo JoystickAdapter;
     };
 	language python;

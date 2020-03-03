@@ -115,6 +115,23 @@ if __name__ == '__main__':
 	except Ice.ConnectionRefusedException as e:
 		print('Cannot connect to IceStorm! ('+proxy+')')
 		status = 1
+
+	# Remote object connection for YoloServer
+	try:
+		proxyString = ic.getProperties().getProperty('YoloServerProxy')
+		try:
+			basePrx = ic.stringToProxy(proxyString)
+			yoloserver_proxy = YoloServerPrx.uncheckedCast(basePrx)
+			mprx["YoloServerProxy"] = yoloserver_proxy
+		except Ice.Exception:
+			print('Cannot connect to the remote object (YoloServer)', proxyString)
+			#traceback.print_exc()
+			status = 1
+	except Ice.Exception as e:
+		print(e)
+		print('Cannot get YoloServerProxy property.')
+		status = 1
+
 	if status == 0:
 		worker = SpecificWorker(mprx)
 		worker.setParams(parameters)
