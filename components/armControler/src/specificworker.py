@@ -30,7 +30,11 @@ import os
 import time
 import threading
 import cv2
-import threading
+import numpy as np
+
+#vrep
+import vrep
+import b0RemoteApi
 
 #import api kortex
 from kortex_api.autogen.client_stubs.BaseClientRpc import BaseClient
@@ -75,13 +79,23 @@ class SpecificWorker(GenericWorker):
 		bM.cartesian_Position_movement(self.base, self.base_cyclic, 0)
 
 		#video capture
-		self.video_capture = cv2.VideoCapture('rtsp://192.168.1.10/color')
-		self.depth_capture = cv2.VideoCapture('rtsp://192.168.1.10/depth')
+		#self.video_capture = cv2.VideoCapture('rtsp://192.168.1.10/color')
+		#self.depth_capture = cv2.VideoCapture('rtsp://192.168.1.10/depth')
 
 		#threading.Thread(target=self.capturador_de_video).start()
 
+		self.client = b0RemoteApi.RemoteApiClient('b0RemoteApi_pythonClient','b0RemoteApiAddOn')
+		self.wall_camera = self.client.simxGetObjectHandle('Camera_Arm', self.client.simxServiceCall())
+		self.target = self.client.simxGetObjectHandle('target', self.client.simxServiceCall())[1]
+
+		# Obtiene los elementos que son los actuadores
+		self.actuators = []
+		for i in range(7):
+			self.actuators.append(self.client.simxGetObjectHandle('Actuator'+str(i+1), self.client.simxServiceCall())[1])
+
 		self.DISPLAY = True
 		self.JOYSTICK_EVENT = False
+		self.VREP =  True
 
 	def __del__(self):
 		print('SpecificWorker destructor')
@@ -94,9 +108,29 @@ class SpecificWorker(GenericWorker):
 	@QtCore.Slot()
 	def compute(self):
 	
+		print('qwe')
+		'''
 		if self.JOYSTICK_EVENT:
 			bM.cartesian_Relative_movement(self.base, self.base_cyclic, self.joystickVector['x'], self.joystickVector['y'], self.joystickVector['z'], 0, 0, 0)
 			self.JOYSTICK_EVENT = False
+		
+		if self.VREP:
+			res, resolution, imageVREP = self.client.simxGetVisionSensorImage(self.wall_camera[1],False, self.client.simxServiceCall())
+			imageVREP, objectsVREP = self.callYoloVREP(imageVREP, resolution)
+			cv2.imshow("Gen3",imageVREP)
+
+		#image brazo fisico
+		imageBrazo, objectsBrazo = self.callYolo(self.frame, self.frame.shape)
+		'''
+
+		currentActuatorPosition = bM.getActuator(self.base, self.base_cyclic)
+
+		# Pones la posición del actuador 1
+		for i in range(len(currentActuatorPosition)):
+			self.client.simxSetJointPosition(self.actuators[i], np.deg2rad(currentActuatorPosition[i]), self.client.simxServiceCall())
+
+		print('hhsd')
+
 		
 		# #leemos las dos imagenes
 		# _, frame = self.video_capture.read()
@@ -107,7 +141,6 @@ class SpecificWorker(GenericWorker):
 		#frameDepth = cv2.resize(frameDepth, (608,608))
 
 		#enviamos el contenido a yolo
-		#self.nueva = self.callYolo(self.frame, self.frame.shape)
 
 		#calculamos el promedio del rectangulo identificado
 		# posNuevaImagen.x = box.left
@@ -117,7 +150,7 @@ class SpecificWorker(GenericWorker):
 		#m = cv2.mean(frameDepth(posNuevaImagen))
 		#print(m)
 
-		#cv2.imshow("Gen3",self.frame)
+		#cv2.imshow("Gen3",self.nueva)
 		#cv2.waitKey(1)
 	
 		return True
@@ -126,10 +159,10 @@ class SpecificWorker(GenericWorker):
 	def capturador_de_video(self):
 		#leemos las dos imagenes
 		while True:
-			_, self.frame = self.video_capture.read()
+			_, frame = self.video_capture.read()
 			#_, frameDepth = self.depth_capture.read()
-			self.frame = cv2.resize(self.frame, (608,608))
-			time.sleep(0.05)
+			self.frame = cv2.resize(frame, (608,608))
+			time.sleep(0.001)
 			
 
 
@@ -207,7 +240,7 @@ class SpecificWorker(GenericWorker):
 			objects = self.yoloserver_proxy.processImage(yimg)
 			if self.DISPLAY:	
 				if len(objects)>0:
-					print("Objects:", len(objects))
+					print("Objects Brazo:", len(objects))
 					for box in objects:
 						#print(box)
 						if box.prob > 50:
@@ -218,7 +251,30 @@ class SpecificWorker(GenericWorker):
 							cv2.rectangle(image, p1, p2, (0, 0, 255), 4)
 							font = cv2.FONT_HERSHEY_SIMPLEX
 							cv2.putText(image, box.name + " " + str(int(box.prob)) + "%", pt, font, 1, (255, 255, 255), 2)				
-			return image
+			return image, objects
+		except  Exception as e:
+			print("error", e)
+
+	def callYoloVREP(self, image, res):
+		try:
+			img = np.fromstring(image, np.uint8).reshape( res[1],res[0], 3)
+			img = cv2.resize(img, (608, 608))
+			resu = img.shape
+			yimg = yolo.TImage(width=resu[0], height=resu[1], depth=3, image=img)
+			objects = self.yoloserver_proxy.processImage(yimg)
+			if self.DISPLAY:	
+				if len(objects)>0:
+					print("Objects VREP", len(objects))
+					for box in objects:
+						if box.prob > 50:
+							p1 = (box.left, box.top)
+							p2 = (box.right, box.bot)
+							offset = int((p2[1] - p1[1]) / 2)
+							pt = (box.left + offset, box.top + offset) 
+							cv2.rectangle(img, p1, p2, (0, 0, 255), 4)
+							font = cv2.FONT_HERSHEY_SIMPLEX
+							cv2.putText(img, box.name + " " + str(int(box.prob)) + "%", pt, font, 1, (255, 255, 255), 2)				
+			return img, objects
 		except  Exception as e:
 			print("error", e)
 

@@ -85,7 +85,7 @@ def cartesian_Position_movement(base, base_cyclic, typeMovement):
         cartesian_pose.theta_y =  0.0 # (degrees)
         cartesian_pose.theta_z = 90.0 # (degrees)
     else:
-        print("No esta definido ese moviento")
+        print("No esta definido ese movimiento")
 
     e = threading.Event()
     notification_handle = base.OnNotificationActionTopic(
@@ -175,6 +175,15 @@ def cartesian_Relative_movement(base, base_cyclic, x, y, z, theta_x, theta_y, th
     else:
         print("Timeout on action notification wait")
     return finished
+
+def getActuator(base, base_cyclic):
+    print("Get position actuador ...")
+    action = Base_pb2.Action()
+    action.name = "Example angular action movement"
+    action.application_data = ""
+
+    feedback = base_cyclic.RefreshFeedback()
+    return [actuador.position for actuador in feedback.actuators]
 
 def gripper_Close_All(base):
     # Create the GripperCommand we will send
