@@ -104,13 +104,13 @@ class SpecificWorker(GenericWorker):
 
 ###################################################################################################
 	def gotoPose(self, incs):
-		
+
 		succ, pose = self.client.simxGetObjectPosition(self.target, -1, self.client.simxServiceCall())
 		#print(pose)
 		new_pose = [(0.01*incs[i])+pose[i] for i in range(len(pose))]
 		#print(new_pose)
 		self.client.simxSetObjectPosition(self.target, -1, new_pose, self.client.simxServiceCall())
-		
+
 	def goHome(self):
 		home = [-2.1890029907226562, -1.8270002603530884, 0.9950007200241089]
 		self.client.simxSetObjectPosition(self.target, -1, home, self.client.simxServiceCall())
@@ -124,12 +124,15 @@ class SpecificWorker(GenericWorker):
 
 	def callYolo(self, image, res):
 		try:
-			yimg = RoboCompYoloServer.TImage(width=res[0], height=res[1], depth=3, image=image)
+			img = np.fromstring(image, np.uint8).reshape( res[1],res[0], 3)
+			img = cv2.resize(img, (608, 608))
+			resu = img.shape
+			yimg = RoboCompYoloServer.TImage(width=resu[0], height=resu[1], depth=3, image=img)
 			objects = self.yoloserver_proxy.processImage(yimg)
 			print(len(objects))
 			if self.display:	
 				if len(objects)>0:
-					for box in labels:
+					for box in objects:
 						if box.prob > 50:
 							p1 = (box.left, box.top)
 							p2 = (box.right, box.bot)
@@ -137,17 +140,17 @@ class SpecificWorker(GenericWorker):
 							pt = (box.left + offset, box.top + offset) 
 							cv2.rectangle(img, p1, p2, (0, 0, 255), 4)
 							font = cv2.FONT_HERSHEY_SIMPLEX
-							cv2.putText(image, box.name + " " + str(int(box.prob)) + "%", pt, font, 1, (255, 255, 255), 2)				
-			return image
+							cv2.putText(img, box.name + " " + str(int(box.prob)) + "%", pt, font, 1, (255, 255, 255), 2)				
+			return img
 		except  Exception as e:
 			print("error", e)
 	
 	def displayImage(self, image, resolution):
-		img = np.fromstring(image, np.uint8).reshape( resolution[1],resolution[0], 3)
-		img = cv2.flip(img, 0)
-		img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
-		cv2.drawMarker(img, (int(resolution[0]/2), int(resolution[1]/2)),  (0, 0, 255), cv2.MARKER_CROSS, 100, 1);
-		cv2.imshow("Camera_" + str(self.cameraid), img)
+		#img = np.fromstring(image, np.uint8).reshape( resolution[1],resolution[0], 3)
+		#img = cv2.flip(img, 0)
+		image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+		cv2.drawMarker(image, (int(resolution[0]/2), int(resolution[1]/2)),  (0, 0, 255), cv2.MARKER_CROSS, 100, 1);
+		cv2.imshow("Camera_" + str(self.cameraid), image)
 		cv2.waitKey(1)
 	
 	def getAprilTags(self, image, resolution):
