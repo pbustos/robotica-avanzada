@@ -30,6 +30,7 @@ import os
 import time
 import threading
 import cv2
+import threading
 
 #import api kortex
 from kortex_api.autogen.client_stubs.BaseClientRpc import BaseClient
@@ -57,7 +58,7 @@ import basicMovements as bM
 class SpecificWorker(GenericWorker):
 	def __init__(self, proxy_map):
 		super(SpecificWorker, self).__init__(proxy_map)
-		self.Period = 20
+		self.Period = 50
 		self.timer.start(self.Period)
 
 		self.defaultMachine.start()
@@ -77,7 +78,10 @@ class SpecificWorker(GenericWorker):
 		self.video_capture = cv2.VideoCapture('rtsp://192.168.1.10/color')
 		self.depth_capture = cv2.VideoCapture('rtsp://192.168.1.10/depth')
 
-		self.display = True
+		#threading.Thread(target=self.capturador_de_video).start()
+
+		self.DISPLAY = True
+		self.JOYSTICK_EVENT = False
 
 	def __del__(self):
 		print('SpecificWorker destructor')
@@ -89,34 +93,46 @@ class SpecificWorker(GenericWorker):
 
 	@QtCore.Slot()
 	def compute(self):
-		print('SpecificWorker.compute...')
-		#bM.cartesian_Relative_movement(self.base, self.base_cyclic, self.joystickVector['x'], self.joystickVector['y'], self.joystickVector['z'], 0, 0, 0)
+	
+		if self.JOYSTICK_EVENT:
+			bM.cartesian_Relative_movement(self.base, self.base_cyclic, self.joystickVector['x'], self.joystickVector['y'], self.joystickVector['z'], 0, 0, 0)
+			self.JOYSTICK_EVENT = False
 		
-		#leemos las dos imagenes
-		_, frame = self.video_capture.read()
-		_, frameDepth = self.depth_capture.read()
+		# #leemos las dos imagenes
+		# _, frame = self.video_capture.read()
+		# _, frameDepth = self.depth_capture.read()
 
 		# resize
-		#frame = cv2.resize(frame, (608,608))
+		
 		#frameDepth = cv2.resize(frameDepth, (608,608))
 
 		#enviamos el contenido a yolo
-		frame, box = self.callYolo(frame, frame.shape)
+		#self.nueva = self.callYolo(self.frame, self.frame.shape)
 
 		#calculamos el promedio del rectangulo identificado
-		posNuevaImagen.x = box.left
-		posNuevaImagen.y = box.top
-		posNuevaImagen.width = box.right - box.left
-		posNuevaImagen.height = box.bot - box.top
+		# posNuevaImagen.x = box.left
+		# posNuevaImagen.y = box.top
+		# posNuevaImagen.width = box.right - box.left
+		# posNuevaImagen.height = box.bot - box.top
+		#m = cv2.mean(frameDepth(posNuevaImagen))
+		#print(m)
 
-		m = cv2.mean(frameDepth(posNuevaImagen))
-		print(m)
-
-		cv2.imshow("",frame)
+		#cv2.imshow("Gen3",self.frame)
+		#cv2.waitKey(1)
 	
-
-
 		return True
+
+
+	def capturador_de_video(self):
+		#leemos las dos imagenes
+		while True:
+			_, self.frame = self.video_capture.read()
+			#_, frameDepth = self.depth_capture.read()
+			self.frame = cv2.resize(self.frame, (608,608))
+			time.sleep(0.05)
+			
+
+
 
 # =============== Slots methods for State Machine ===================
 # ===================================================================
@@ -134,7 +150,7 @@ class SpecificWorker(GenericWorker):
 	#
 	@QtCore.Slot()
 	def sm_compute(self):
-		print("Entered state compute")
+		#print("Entered state compute")
 		self.compute()
 		pass
 
@@ -150,41 +166,50 @@ class SpecificWorker(GenericWorker):
 # =================================================================
 # =================================================================
 
-
+	# PUBLISHING FROM DATA
 	#
 	# sendData
 	#
 	def JoystickAdapter_sendData(self, data):
+		#print("Data", data)
 		if hasattr(data,"buttons") and data.buttons[0].clicked == True:
 				self.joystickVector['x'] = 0
 				self.joystickVector['y'] = 0
 				self.joystickVector['z'] = 0
 				bM.cartesian_Position_movement(self.base, self.base_cyclic, 0)
 		else: 
-			if abs([axis.value for axis in data.axes if axis.name == "x"][0]) < 0.3:
+		
+			if abs([axis.value for axis in data.axes if axis.name == "x"][0]) < 0.2:
 				self.joystickVector['x'] = 0
 			else:
 				self.joystickVector['x'] = [axis.value for axis in data.axes if axis.name == "x"][0] / 10.0
 			
-			if abs([axis.value for axis in data.axes if axis.name == "y"][0]) < 0.3:
+			if abs([axis.value for axis in data.axes if axis.name == "y"][0]) < 0.2:
 				self.joystickVector['y'] = 0
 			else:
 				self.joystickVector['y'] = [axis.value for axis in data.axes if axis.name == "y"][0] / 10.0 
 			
-			if abs([axis.value for axis in data.axes if axis.name == "z"][0]) < 0.3:
+			if abs([axis.value for axis in data.axes if axis.name == "z"][0]) < 0.2:
 				self.joystickVector['z'] = 0
 			else:
 				self.joystickVector['z'] = [axis.value for axis in data.axes if axis.name == "z"][0] / 10.0
+			
+			self.JOYSTICK_EVENT = True
 
+			
+
+################################################################################
+###  Yolo proxy
+################################################################################
 	def callYolo(self, image, res):
 		try:
 			yimg = yolo.TImage(width=res[0], height=res[1], depth=3, image=image)
 			objects = self.yoloserver_proxy.processImage(yimg)
-			print(len(objects))
-			if self.display:	
+			if self.DISPLAY:	
 				if len(objects)>0:
+					print("Objects:", len(objects))
 					for box in objects:
-						print(box)
+						#print(box)
 						if box.prob > 50:
 							p1 = (box.left, box.top)
 							p2 = (box.right, box.bot)
@@ -193,7 +218,7 @@ class SpecificWorker(GenericWorker):
 							cv2.rectangle(image, p1, p2, (0, 0, 255), 4)
 							font = cv2.FONT_HERSHEY_SIMPLEX
 							cv2.putText(image, box.name + " " + str(int(box.prob)) + "%", pt, font, 1, (255, 255, 255), 2)				
-			return image, box
+			return image
 		except  Exception as e:
 			print("error", e)
 
