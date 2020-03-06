@@ -1,0 +1,23 @@
+INCLUDE( $ENV{ROBOCOMP}/cmake/modules/opencv3.cmake )
+
+# Sources set
+SET ( SOURCES
+  specificworker.cpp
+  specificmonitor.cpp
+  /home/pbustos/Software/CoppeliaSim_Edu_V4_0_0_Ubuntu18_04/programming/b0RemoteApiBindings/cpp/b0RemoteApi.cpp
+)
+
+# Headers set
+SET ( HEADERS
+  specificworker.h
+  specificmonitor.h
+)
+
+set(CMAKE_CXX_STANDARD 17)
+ADD_DEFINITIONS (-DICE_CPP11_MAPPING -O3 -mavx2 -I /home/pbustos/software/CoppeliaSim_Edu_V4_0_0_Ubuntu18_04/programming/bluezero/include/b0/bindings -I /home/pbustos/Software/CoppeliaSim_Edu_V4_0_0_Ubuntu18_04/programming/b0RemoteApiBindings/cpp/ -I /home/pbustos/Software/CoppeliaSim_Edu_V4_0_0_Ubuntu18_04/programming/b0RemoteApiBindings/cpp/msgpack-c/include/ -I /home/pbustos/Software/CoppeliaSim_Edu_V4_0_0_Ubuntu18_04/programming/remoteApi/)
+
+SET(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} -fmax-errors=5) 
+
+SET (LIBS ${LIBS}  b0 boost_system )
+
+

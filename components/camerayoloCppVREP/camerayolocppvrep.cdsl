@@ -1,0 +1,12 @@
+import "YoloServer.idsl";
+
+Component camerayolocppvrep
+{
+    Communications
+    {
+        requires YoloServer;
+    };
+	language Cpp11;
+	statemachine "statemachine.smdsl";
+};
+
