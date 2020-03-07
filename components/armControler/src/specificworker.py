@@ -53,12 +53,6 @@ import utilities
 sys.path.append('/basicMovements')
 import basicMovements as bM
 
-# If RoboComp was compiled with Python bindings you can use InnerModel in Python
-# sys.path.append('/opt/robocomp/lib')
-# import librobocomp_qmat
-# import librobocomp_osgviewer
-# import librobocomp_innermodel
-
 class SpecificWorker(GenericWorker):
 	def __init__(self, proxy_map):
 		super(SpecificWorker, self).__init__(proxy_map)
@@ -68,22 +62,15 @@ class SpecificWorker(GenericWorker):
 		self.defaultMachine.start()
 		self.destroyed.connect(self.t_compute_to_finalize)
 
-		# connect
+		# Connect to Arm
 		self.router, self.transport, self.session_manager = bM.connect()
+
 		# Create required services
 		self.device_config = DeviceConfigClient(self.router)
 		self.base = BaseClient(self.router)
 		self.base_cyclic = BaseCyclicClient(self.router)
 
-		self.joystickVector = {'x':0, 'y':0, 'z':0}
-		bM.cartesian_Position_movement(self.base, self.base_cyclic, 0)
-
-		#video capture
-		#self.video_capture = cv2.VideoCapture('rtsp://192.168.1.10/color')
-		#self.depth_capture = cv2.VideoCapture('rtsp://192.168.1.10/depth')
-
-		#threading.Thread(target=self.capturador_de_video).start()
-
+		# Connect to VREP INNER-ARM
 		self.client = b0RemoteApi.RemoteApiClient('b0RemoteApi_pythonClient','b0RemoteApiAddOn')
 		self.wall_camera = self.client.simxGetObjectHandle('Camera_Arm', self.client.simxServiceCall())
 		self.target = self.client.simxGetObjectHandle('target', self.client.simxServiceCall())[1]
@@ -93,6 +80,11 @@ class SpecificWorker(GenericWorker):
 		for i in range(7):
 			self.actuators.append(self.client.simxGetObjectHandle('Actuator'+str(i+1), self.client.simxServiceCall())[1])
 
+		# Move arm to [0 0 0]
+		self.joystickVector = {'x':0, 'y':0, 'z':0}
+		bM.cartesian_Position_movement(self.base, self.base_cyclic, 0)
+		# MOVE ALSO THE INNER-ARM
+		
 		self.DISPLAY = True
 		self.JOYSTICK_EVENT = False
 		self.VREP =  True
@@ -123,24 +115,15 @@ class SpecificWorker(GenericWorker):
 		imageBrazo, objectsBrazo = self.callYolo(self.frame, self.frame.shape)
 		'''
 
+		# Read current ARM joint values and INNER-ARM joints accordingly
 		currentActuatorPosition = bM.getActuator(self.base, self.base_cyclic)
-
-		# Pones la posición del actuador 1
 		for i in range(len(currentActuatorPosition)):
 			self.client.simxSetJointPosition(self.actuators[i], np.deg2rad(currentActuatorPosition[i]), self.client.simxServiceCall())
-
-		print('hhsd')
-
 		
-		# #leemos las dos imagenes
-		# _, frame = self.video_capture.read()
-		# _, frameDepth = self.depth_capture.read()
+		# Check if two new images + yolo have come
+		# Compute the difference between Yolo lists
+		# Move, Add or Remove objects from INNER-MODEL
 
-		# resize
-		
-		#frameDepth = cv2.resize(frameDepth, (608,608))
-
-		#enviamos el contenido a yolo
 
 		#calculamos el promedio del rectangulo identificado
 		# posNuevaImagen.x = box.left
@@ -155,15 +138,6 @@ class SpecificWorker(GenericWorker):
 	
 		return True
 
-
-	def capturador_de_video(self):
-		#leemos las dos imagenes
-		while True:
-			_, frame = self.video_capture.read()
-			#_, frameDepth = self.depth_capture.read()
-			self.frame = cv2.resize(frame, (608,608))
-			time.sleep(0.001)
-			
 
 
 
@@ -199,9 +173,7 @@ class SpecificWorker(GenericWorker):
 # =================================================================
 # =================================================================
 
-	# PUBLISHING FROM DATA
-	#
-	# sendData
+	# SUBSCRIPTION FROM JOYSTICK ==================================
 	#
 	def JoystickAdapter_sendData(self, data):
 		#print("Data", data)
@@ -228,8 +200,6 @@ class SpecificWorker(GenericWorker):
 				self.joystickVector['z'] = [axis.value for axis in data.axes if axis.name == "z"][0] / 10.0
 			
 			self.JOYSTICK_EVENT = True
-
-			
 
 ################################################################################
 ###  Yolo proxy

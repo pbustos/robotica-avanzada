@@ -45,6 +45,7 @@ QObject()
 
 //------------------
 	yoloserver_proxy = std::get<0>(tprx);
+	camerargbdsimpleyolopub_pubproxy = std::get<1>(tprx);
 
 	mutex = new QMutex(QMutex::Recursive);
 

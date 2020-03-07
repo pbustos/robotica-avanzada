@@ -27,16 +27,20 @@
 #include <QState>
 #include <CommonBehavior.h>
 
+#include <CameraRGBDSimple.h>
 #include <YoloServer.h>
+#include <CameraRGBDSimpleYoloPub.h>
 
 
 #define CHECK_PERIOD 5000
 #define BASIC_PERIOD 100
 
 using namespace std;
+using namespace RoboCompCameraRGBDSimple;
 using namespace RoboCompYoloServer;
+using namespace RoboCompCameraRGBDSimpleYoloPub;
 
-using TuplePrx = std::tuple<RoboCompYoloServer::YoloServerPrxPtr>;
+using TuplePrx = std::tuple<RoboCompYoloServer::YoloServerPrxPtr,RoboCompCameraRGBDSimpleYoloPub::CameraRGBDSimpleYoloPubPrxPtr>;
 
 
 class GenericWorker :
@@ -54,6 +58,7 @@ public:
 
 
 	YoloServerPrxPtr yoloserver_proxy;
+	CameraRGBDSimpleYoloPubPrxPtr camerargbdsimpleyolopub_pubproxy;
 
 
 protected:

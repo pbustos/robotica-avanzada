@@ -85,7 +85,7 @@ class SpecificWorker(GenericWorker):
 			self.getAprilTags(image, resolution)
 		
 		if self.yolo:
-			image = self.callYolo(image, resolution)
+			yimg = self.callYolo(image, resolution)
 
 		if self.display:
 			self.displayImage(image, resolution)
@@ -146,11 +146,11 @@ class SpecificWorker(GenericWorker):
 			print("error", e)
 	
 	def displayImage(self, image, resolution):
-		#img = np.fromstring(image, np.uint8).reshape( resolution[1],resolution[0], 3)
-		#img = cv2.flip(img, 0)
-		image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
-		cv2.drawMarker(image, (int(resolution[0]/2), int(resolution[1]/2)),  (0, 0, 255), cv2.MARKER_CROSS, 100, 1);
-		cv2.imshow("Camera_" + str(self.cameraid), image)
+		img = np.fromstring(image, np.uint8).reshape( resolution[1],resolution[0], 3)
+		img = cv2.flip(img, 0)
+		img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+		cv2.drawMarker(img, (int(resolution[0]/2), int(resolution[1]/2)),  (0, 0, 255), cv2.MARKER_CROSS, 100, 1);
+		cv2.imshow("Camera_" + str(self.cameraid), img)
 		cv2.waitKey(1)
 	
 	def getAprilTags(self, image, resolution):

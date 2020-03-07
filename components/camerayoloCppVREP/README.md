@@ -5,6 +5,7 @@
 ```
 Intro to component here
 
+Copy libb0.so to /usr/local/lib and refreash cache
 
 ## Configuration parameters
 As any other component,

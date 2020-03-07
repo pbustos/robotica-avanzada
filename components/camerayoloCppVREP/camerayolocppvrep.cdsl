@@ -1,10 +1,12 @@
 import "YoloServer.idsl";
+import "CameraRGBDSimpleYoloPub.idsl";
 
 Component camerayolocppvrep
 {
     Communications
     {
         requires YoloServer;
+        publishes CameraRGBDSimpleYoloPub;
     };
 	language Cpp11;
 	statemachine "statemachine.smdsl";

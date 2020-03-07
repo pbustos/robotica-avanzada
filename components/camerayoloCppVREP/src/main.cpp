@@ -82,6 +82,7 @@
 #include "commonbehaviorI.h"
 
 
+#include <CameraRGBDSimple.h>
 
 
 // User includes here
@@ -129,6 +130,7 @@ int ::camerayolocppvrep::run(int argc, char* argv[])
 
 	int status=EXIT_SUCCESS;
 
+	CameraRGBDSimpleYoloPubPrxPtr camerargbdsimpleyolopub_pubproxy;
 	YoloServerPrxPtr yoloserver_proxy;
 
 	string proxy, tmp;
@@ -150,8 +152,42 @@ int ::camerayolocppvrep::run(int argc, char* argv[])
 	}
 	rInfo("YoloServerProxy initialized Ok!");
 
+	IceStorm::TopicManagerPrxPtr topicManager;
+	try
+	{
+		topicManager = Ice::checkedCast<IceStorm::TopicManagerPrx>(communicator()->propertyToProxy("TopicManager.Proxy"));
+	}
+	catch (const Ice::Exception &ex)
+	{
+		cout << "[" << PROGRAM_NAME << "]: Exception: STORM not running: " << ex << endl;
+		return EXIT_FAILURE;
+	}
+	std::shared_ptr<IceStorm::TopicPrx> camerargbdsimpleyolopub_topic;
 
-	tprx = std::make_tuple(yoloserver_proxy);
+	while (!camerargbdsimpleyolopub_topic)
+	{
+		try
+		{
+			camerargbdsimpleyolopub_topic = topicManager->retrieve("CameraRGBDSimpleYoloPub");
+		}
+		catch (const IceStorm::NoSuchTopic&)
+		{
+			cout << "[" << PROGRAM_NAME << "]: ERROR retrieving CameraRGBDSimpleYoloPub topic. \n";
+			try
+			{
+				camerargbdsimpleyolopub_topic = topicManager->create("CameraRGBDSimpleYoloPub");
+			}
+			catch (const IceStorm::TopicExists&){
+				// Another client created the topic.
+				cout << "[" << PROGRAM_NAME << "]: ERROR publishing the CameraRGBDSimpleYoloPub topic. It's possible that other component have created\n";
+			}
+		}
+	}
+
+	auto camerargbdsimpleyolopub_pub = camerargbdsimpleyolopub_topic->getPublisher()->ice_oneway();
+	camerargbdsimpleyolopub_pubproxy = Ice::uncheckedCast<CameraRGBDSimpleYoloPubPrx>(camerargbdsimpleyolopub_pub);
+
+	tprx = std::make_tuple(yoloserver_proxy,camerargbdsimpleyolopub_pubproxy);
 	SpecificWorker *worker = new SpecificWorker(tprx);
 	//Monitor thread
 	SpecificMonitor *monitor = new SpecificMonitor(worker,communicator());

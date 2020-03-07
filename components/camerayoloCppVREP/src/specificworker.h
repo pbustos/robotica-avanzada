@@ -65,6 +65,7 @@ private:
 	int hand_camera, hand_target;
 	b0RemoteApi *client;
 	FPSCounter fps;
+	bool SHOW_IMAGE = false;
 };
 
 #endif

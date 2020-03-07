@@ -37,6 +37,12 @@ SpecificWorker::~SpecificWorker()
 
 bool SpecificWorker::setParams(RoboCompCommonBehavior::ParameterList params)
 {
+	try
+	{
+		RoboCompCommonBehavior::Parameter par = params.at("ShowImage");
+		SHOW_IMAGE = (par.value == "true");
+	}
+	catch(const std::exception &e) { qFatal("Error reading config params"); }
 	defaultMachine.start();
 	return true;
 }
@@ -67,32 +73,54 @@ void SpecificWorker::initialize(int period)
 
 void SpecificWorker::compute()
 {
+	std::vector<int> size;
+	RoboCompYoloServer::Objects objs;	
+	RoboCompYoloServer::TImage image;
 	auto resImg = client->simxGetVisionSensorImage(hand_camera, false, client->simxServiceCall());
-	//res, resolution, image
-	auto resDepth = client->simxGetVisionSensorDepthBuffer(hand_camera, true, true, client->simxServiceCall());
 	if(b0RemoteApi::readBool(resImg, 0))
+	{
+		b0RemoteApi::readIntArray(resImg, size, 1);
+		int cols = size[0]; int rows = size[1]; int len = cols*rows;
+		image.width = cols; image.height = rows; image.depth = 3; image.image.resize(len);
+		memcpy(&image.image[0], b0RemoteApi::readByteArray(resImg, 2).data(), len);
 		try
 		{
-			std::vector<int> size(2);
-			b0RemoteApi::readIntArray(resImg, size, 1);
-			RoboCompYoloServer::TImage image{ size[0], size[1], 3};
-			qDebug() << size[0] << size[1];
-			//cv::Mat yimg(size[1], size[0], CV8UC3, &b0RemoteApi::readByteArray(resImg, 2)[0]);
-			//cv::resize(yimg, yimgdst, 608, 608, cv::INTER_LINEAR);
-			image.image.resize(size[0]*size[1]*3);
-			memcpy(&image.image[0], b0RemoteApi::readByteArray(resImg, 2).data(), size[0]*size[1]*3);
-			//yoloserver_proxy->processImage(image);
-
-			cv::Mat cvimg(size[1], size[0], CV_8UC3, b0RemoteApi::readByteArray(resImg, 2).data());
-			cv::imshow("", cvimg);
-			
+			objs = yoloserver_proxy->processImage(image);
+			qDebug() << "objects" << objs.size();
 		}
 		catch(const std::exception& e)
 		{
 			std::cerr << e.what() << '\n';
 		}
-	
 
+		if( SHOW_IMAGE )
+		{
+			cv::Mat cvimg = cv::Mat(cv::Size{640,480}, CV_8UC3,  b0RemoteApi::readByteArray(resImg, 2).data() );
+			cv::imshow("", cvimg);
+			cv::waitKey(1);
+		}
+	}
+	else
+		qDebug() << __FUNCTION__ << "Error capturing image";
+	
+	auto resDepth = client->simxGetVisionSensorDepthBuffer(hand_camera, true, true, client->simxServiceCall());
+	if( b0RemoteApi::readBool(resDepth, 0)) 
+	{
+		b0RemoteApi::readIntArray(resDepth, size, 1);
+		int dcols = size[0]; int drows = size[1]; int dlen = dcols*drows*4;  // OJO float size
+		RoboCompCameraRGBDSimple::TDepth depth{0, dcols, drows, 500, 500, 0}; depth.depth.resize(dlen); 
+		memcpy(&depth.depth[0], b0RemoteApi::readByteArray(resDepth, 2).data(), dlen);
+		// We need to swap the image in YoloServer::TImage to the type in RoboCompCameraRGBDSimple
+		RoboCompCameraRGBDSimple::TImage fimage{ 0, dcols, drows, 3, 500, 500, 0}; fimage.image.resize(dlen);
+		std::swap(fimage.image, image.image);  // swap from YoloServer::TImage image type
+		try
+		{ 
+			camerargbdsimpleyolopub_pubproxy->pubImage(fimage, depth, objs);
+		}
+		catch(const Ice::Exception &e){std::cout << e << std::endl;}
+	}
+	else
+		qDebug() << __FUNCTION__ << "Error capturing depth";
 	fps.print();
 }
 
@@ -105,7 +133,7 @@ void SpecificWorker::sm_compute()
 
 void SpecificWorker::sm_initialize()
 {
-	std::cout<<"Entered initial state initialize"<<std::endl;
+	std::cout<<"Entered initial state initialize"<<std::endl;	
 }
 
 void SpecificWorker::sm_finalize()
