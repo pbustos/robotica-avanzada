@@ -1,11 +1,11 @@
 import "JoystickAdapter.idsl";
-import "YoloServer.idsl";
+import "CameraRGBDSimpleYoloPub.idsl";
 Component armControler
 {
     Communications
     {
         requires YoloServer;
-        subscribesTo JoystickAdapter;
+        subscribesTo JoystickAdapter, CameraRGBDSimpleYoloPub;
     };
 	language python;
     statemachine "statemachine.smdsl";

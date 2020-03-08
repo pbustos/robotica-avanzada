@@ -21,10 +21,6 @@
 
 from genericworker import *
 
-#import yolo
-import RoboCompYoloServer as yolo
-
-#import pyhton
 import sys
 import os
 import time
@@ -63,12 +59,12 @@ class SpecificWorker(GenericWorker):
 		self.destroyed.connect(self.t_compute_to_finalize)
 
 		# Connect to Arm
-		self.router, self.transport, self.session_manager = bM.connect()
+		#self.router, self.transport, self.session_manager = bM.connect()
 
 		# Create required services
-		self.device_config = DeviceConfigClient(self.router)
-		self.base = BaseClient(self.router)
-		self.base_cyclic = BaseCyclicClient(self.router)
+		# self.device_config = DeviceConfigClient(self.router)
+		# self.base = BaseClient(self.router)
+		# self.base_cyclic = BaseCyclicClient(self.router)
 
 		# Connect to VREP INNER-ARM
 		self.client = b0RemoteApi.RemoteApiClient('b0RemoteApi_pythonClient','b0RemoteApiAddOn')
@@ -82,7 +78,7 @@ class SpecificWorker(GenericWorker):
 
 		# Move arm to [0 0 0]
 		self.joystickVector = {'x':0, 'y':0, 'z':0}
-		bM.cartesian_Position_movement(self.base, self.base_cyclic, 0)
+		#bM.cartesian_Position_movement(self.base, self.base_cyclic, 0)
 		# MOVE ALSO THE INNER-ARM
 		
 		self.DISPLAY = True
@@ -92,7 +88,7 @@ class SpecificWorker(GenericWorker):
 	def __del__(self):
 		print('SpecificWorker destructor')
 		# disconnect
-		bM.disconnect(self.session_manager, self.transport)
+		#bM.disconnect(self.session_manager, self.transport)
 
 	def setParams(self, params):
 		return True
@@ -100,7 +96,6 @@ class SpecificWorker(GenericWorker):
 	@QtCore.Slot()
 	def compute(self):
 	
-		print('qwe')
 		'''
 		if self.JOYSTICK_EVENT:
 			bM.cartesian_Relative_movement(self.base, self.base_cyclic, self.joystickVector['x'], self.joystickVector['y'], self.joystickVector['z'], 0, 0, 0)
@@ -116,9 +111,9 @@ class SpecificWorker(GenericWorker):
 		'''
 
 		# Read current ARM joint values and INNER-ARM joints accordingly
-		currentActuatorPosition = bM.getActuator(self.base, self.base_cyclic)
-		for i in range(len(currentActuatorPosition)):
-			self.client.simxSetJointPosition(self.actuators[i], np.deg2rad(currentActuatorPosition[i]), self.client.simxServiceCall())
+		#currentActuatorPosition = bM.getActuator(self.base, self.base_cyclic)
+		#for i in range(len(currentActuatorPosition)):
+		#	self.client.simxSetJointPosition(self.actuators[i], np.deg2rad(currentActuatorPosition[i]), self.client.simxServiceCall())
 		
 		# Check if two new images + yolo have come
 		# Compute the difference between Yolo lists
@@ -173,8 +168,8 @@ class SpecificWorker(GenericWorker):
 # =================================================================
 # =================================================================
 
-	# SUBSCRIPTION FROM JOYSTICK ==================================
-	#
+# SUBSCRIPTION FROM JOYSTICK ==================================
+#
 	def JoystickAdapter_sendData(self, data):
 		#print("Data", data)
 		if hasattr(data,"buttons") and data.buttons[0].clicked == True:
@@ -201,52 +196,68 @@ class SpecificWorker(GenericWorker):
 			
 			self.JOYSTICK_EVENT = True
 
-################################################################################
-###  Yolo proxy
-################################################################################
-	def callYolo(self, image, res):
-		try:
-			yimg = yolo.TImage(width=res[0], height=res[1], depth=3, image=image)
-			objects = self.yoloserver_proxy.processImage(yimg)
-			if self.DISPLAY:	
-				if len(objects)>0:
-					print("Objects Brazo:", len(objects))
-					for box in objects:
-						#print(box)
-						if box.prob > 50:
-							p1 = (box.left, box.top)
-							p2 = (box.right, box.bot)
-							offset = int((p2[1] - p1[1]) / 2)
-							pt = (box.left + offset, box.top + offset) 
-							cv2.rectangle(image, p1, p2, (0, 0, 255), 4)
-							font = cv2.FONT_HERSHEY_SIMPLEX
-							cv2.putText(image, box.name + " " + str(int(box.prob)) + "%", pt, font, 1, (255, 255, 255), 2)				
-			return image, objects
-		except  Exception as e:
-			print("error", e)
+	## SUBSCRIPTION FROM CameraSimpleYoloPub ==================================
+	#
+	def CameraRGBDSimpleYoloPub_pubImage(self, image, depth, objs):
+		print ("New image ", len(image.image))	
 
-	def callYoloVREP(self, image, res):
-		try:
-			img = np.fromstring(image, np.uint8).reshape( res[1],res[0], 3)
-			img = cv2.resize(img, (608, 608))
-			resu = img.shape
-			yimg = yolo.TImage(width=resu[0], height=resu[1], depth=3, image=img)
-			objects = self.yoloserver_proxy.processImage(yimg)
-			if self.DISPLAY:	
-				if len(objects)>0:
-					print("Objects VREP", len(objects))
-					for box in objects:
-						if box.prob > 50:
-							p1 = (box.left, box.top)
-							p2 = (box.right, box.bot)
-							offset = int((p2[1] - p1[1]) / 2)
-							pt = (box.left + offset, box.top + offset) 
-							cv2.rectangle(img, p1, p2, (0, 0, 255), 4)
-							font = cv2.FONT_HERSHEY_SIMPLEX
-							cv2.putText(img, box.name + " " + str(int(box.prob)) + "%", pt, font, 1, (255, 255, 255), 2)				
-			return img, objects
-		except  Exception as e:
-			print("error", e)
+
+
+
+
+
+
+
+
+
+
+
+# ################################################################################
+# ###  Yolo proxy
+# ################################################################################
+# 	def callYolo(self, image, res):
+# 		try:
+# 			yimg = yolo.TImage(width=res[0], height=res[1], depth=3, image=image)
+# 			objects = self.yoloserver_proxy.processImage(yimg)
+# 			if self.DISPLAY:	
+# 				if len(objects)>0:
+# 					print("Objects Brazo:", len(objects))
+# 					for box in objects:
+# 						#print(box)
+# 						if box.prob > 50:
+# 							p1 = (box.left, box.top)
+# 							p2 = (box.right, box.bot)
+# 							offset = int((p2[1] - p1[1]) / 2)
+# 							pt = (box.left + offset, box.top + offset) 
+# 							cv2.rectangle(image, p1, p2, (0, 0, 255), 4)
+# 							font = cv2.FONT_HERSHEY_SIMPLEX
+# 							cv2.putText(image, box.name + " " + str(int(box.prob)) + "%", pt, font, 1, (255, 255, 255), 2)				
+# 			return image, objects
+# 		except  Exception as e:
+# 			print("error", e)
+
+# 	def callYoloVREP(self, image, res):
+# 		try:
+# 			img = np.fromstring(image, np.uint8).reshape( res[1],res[0], 3)
+# 			img = cv2.resize(img, (608, 608))
+# 			resu = img.shape
+# 			yimg = yolo.TImage(width=resu[0], height=resu[1], depth=3, image=img)
+# 			objects = self.yoloserver_proxy.processImage(yimg)
+# 			if self.DISPLAY:	
+# 				if len(objects)>0:
+# 					print("Objects VREP", len(objects))
+# 					for box in objects:
+# 						if box.prob > 50:
+# 							p1 = (box.left, box.top)
+# 							p2 = (box.right, box.bot)
+# 							offset = int((p2[1] - p1[1]) / 2)
+# 							pt = (box.left + offset, box.top + offset) 
+# 							cv2.rectangle(img, p1, p2, (0, 0, 255), 4)
+# 							font = cv2.FONT_HERSHEY_SIMPLEX
+# 							cv2.putText(img, box.name + " " + str(int(box.prob)) + "%", pt, font, 1, (255, 255, 255), 2)				
+# 			return img, objects
+# 		except  Exception as e:
+# 			print("error", e)
 
 
 

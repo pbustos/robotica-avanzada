@@ -44,18 +44,6 @@ except:
 	print('SLICE_PATH environment variable was not exported. Using only the default paths')
 	pass
 
-ice_YoloServer = False
-for p in icePaths:
-	if os.path.isfile(p+'/YoloServer.ice'):
-		preStr = "-I/opt/robocomp/interfaces/ -I"+ROBOCOMP+"/interfaces/ " + additionalPathStr + " --all "+p+'/'
-		wholeStr = preStr+"YoloServer.ice"
-		Ice.loadSlice(wholeStr)
-		ice_YoloServer = True
-		break
-if not ice_YoloServer:
-	print('Couln\'t load YoloServer')
-	sys.exit(-1)
-from RoboCompYoloServer import *
 ice_JoystickAdapter = False
 for p in icePaths:
 	if os.path.isfile(p+'/JoystickAdapter.ice'):
@@ -68,8 +56,45 @@ if not ice_JoystickAdapter:
 	print('Couln\'t load JoystickAdapter')
 	sys.exit(-1)
 from RoboCompJoystickAdapter import *
+ice_CameraRGBDSimple = False
+for p in icePaths:
+	if os.path.isfile(p+'/CameraRGBDSimple.ice'):
+		preStr = "-I/opt/robocomp/interfaces/ -I"+ROBOCOMP+"/interfaces/ " + additionalPathStr + " --all "+p+'/'
+		wholeStr = preStr+"CameraRGBDSimple.ice"
+		Ice.loadSlice(wholeStr)
+		ice_CameraRGBDSimple = True
+		break
+if not ice_CameraRGBDSimple:
+	print('Couln\'t load CameraRGBDSimple')
+	sys.exit(-1)
+from RoboCompCameraRGBDSimple import *
+ice_YoloServer = False
+for p in icePaths:
+	if os.path.isfile(p+'/YoloServer.ice'):
+		preStr = "-I/opt/robocomp/interfaces/ -I"+ROBOCOMP+"/interfaces/ " + additionalPathStr + " --all "+p+'/'
+		wholeStr = preStr+"YoloServer.ice"
+		Ice.loadSlice(wholeStr)
+		ice_YoloServer = True
+		break
+if not ice_YoloServer:
+	print('Couln\'t load YoloServer')
+	sys.exit(-1)
+from RoboCompYoloServer import *
+ice_CameraRGBDSimpleYoloPub = False
+for p in icePaths:
+	if os.path.isfile(p+'/CameraRGBDSimpleYoloPub.ice'):
+		preStr = "-I/opt/robocomp/interfaces/ -I"+ROBOCOMP+"/interfaces/ " + additionalPathStr + " --all "+p+'/'
+		wholeStr = preStr+"CameraRGBDSimpleYoloPub.ice"
+		Ice.loadSlice(wholeStr)
+		ice_CameraRGBDSimpleYoloPub = True
+		break
+if not ice_CameraRGBDSimpleYoloPub:
+	print('Couln\'t load CameraRGBDSimpleYoloPub')
+	sys.exit(-1)
+from RoboCompCameraRGBDSimpleYoloPub import *
 
 
+from camerargbdsimpleyolopubI import *
 from joystickadapterI import *
 
 

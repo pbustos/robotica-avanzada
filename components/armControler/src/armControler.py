@@ -139,6 +139,29 @@ if __name__ == '__main__':
 		print("Error getting required connections, check config file")
 		sys.exit(-1)
 
+	CameraRGBDSimpleYoloPub_adapter = ic.createObjectAdapter("CameraRGBDSimpleYoloPubTopic")
+	camerargbdsimpleyolopubI_ = CameraRGBDSimpleYoloPubI(worker)
+	camerargbdsimpleyolopub_proxy = CameraRGBDSimpleYoloPub_adapter.addWithUUID(camerargbdsimpleyolopubI_).ice_oneway()
+
+	subscribeDone = False
+	while not subscribeDone:
+		try:
+			camerargbdsimpleyolopub_topic = topicManager.retrieve("CameraRGBDSimpleYoloPub")
+			subscribeDone = True
+		except Ice.Exception as e:
+			print("Error. Topic does not exist (creating)")
+			time.sleep(1)
+			try:
+				camerargbdsimpleyolopub_topic = topicManager.create("CameraRGBDSimpleYoloPub")
+				subscribeDone = True
+			except:
+				print("Error. Topic could not be created. Exiting")
+				status = 0
+	qos = {}
+	camerargbdsimpleyolopub_topic.subscribeAndGetPublisher(qos, camerargbdsimpleyolopub_proxy)
+	CameraRGBDSimpleYoloPub_adapter.activate()
+
+
 	JoystickAdapter_adapter = ic.createObjectAdapter("JoystickAdapterTopic")
 	joystickadapterI_ = JoystickAdapterI(worker)
 	joystickadapter_proxy = JoystickAdapter_adapter.addWithUUID(joystickadapterI_).ice_oneway()
