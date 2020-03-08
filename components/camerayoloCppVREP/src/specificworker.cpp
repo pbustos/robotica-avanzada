@@ -76,6 +76,8 @@ void SpecificWorker::compute()
 	std::vector<int> size;
 	RoboCompYoloServer::Objects objs;	
 	RoboCompYoloServer::TImage image;
+	RoboCompCameraRGBDSimple::TDepth depth;
+	RoboCompCameraRGBDSimple::TImage fimage;
 	auto resImg = client->simxGetVisionSensorImage(hand_camera, false, client->simxServiceCall());
 	if(b0RemoteApi::readBool(resImg, 0))
 	{
@@ -93,6 +95,12 @@ void SpecificWorker::compute()
 			std::cerr << e.what() << '\n';
 		}
 
+		// We need to swap the image in YoloServer::TImage to the type in RoboCompCameraRGBDSimple
+		fimage.cameraID = 1;
+		fimage.width = cols; fimage.height = rows; fimage.depth = 3; fimage.focalx = 500; fimage.focaly = 500; fimage.alivetime = 0; 
+		fimage.image.resize(len); // inner camera's id is 1
+		std::swap(fimage.image, image.image);  // swap from YoloServer::TImage image type
+
 		if( SHOW_IMAGE )
 		{
 			cv::Mat cvimg = cv::Mat(cv::Size{640,480}, CV_8UC3,  b0RemoteApi::readByteArray(resImg, 2).data() );
@@ -108,19 +116,18 @@ void SpecificWorker::compute()
 	{
 		b0RemoteApi::readIntArray(resDepth, size, 1);
 		int dcols = size[0]; int drows = size[1]; int dlen = dcols*drows*4;  // OJO float size
-		RoboCompCameraRGBDSimple::TDepth depth{0, dcols, drows, 500, 500, 0}; depth.depth.resize(dlen); 
+		depth.cameraID = 0;
+		depth.width = dcols; depth.height = drows; depth.focalx = 500; depth.focaly = 500; depth.alivetime = 0; 
+		depth.depth.resize(dlen); 
 		memcpy(&depth.depth[0], b0RemoteApi::readByteArray(resDepth, 2).data(), dlen);
-		// We need to swap the image in YoloServer::TImage to the type in RoboCompCameraRGBDSimple
-		RoboCompCameraRGBDSimple::TImage fimage{ 0, dcols, drows, 3, 500, 500, 0}; fimage.image.resize(dlen);
-		std::swap(fimage.image, image.image);  // swap from YoloServer::TImage image type
-		try
-		{ 
-			camerargbdsimpleyolopub_pubproxy->pubImage(fimage, depth, objs);
-		}
-		catch(const Ice::Exception &e){std::cout << e << std::endl;}
-	}
+			}
 	else
 		qDebug() << __FUNCTION__ << "Error capturing depth";
+	try
+	{ 
+		camerargbdsimpleyolopub_pubproxy->pubImage(fimage, depth, objs);
+	}
+	catch(const Ice::Exception &e){std::cout << e << std::endl;}
 	fps.print();
 }
 
