@@ -1,0 +1,9 @@
+Component pruebaremoto
+{
+    Communications
+    {
+    };
+	language python;
+	statemachine "statemachine.smdsl";
+};
+

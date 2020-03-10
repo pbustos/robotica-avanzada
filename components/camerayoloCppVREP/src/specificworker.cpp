@@ -125,7 +125,7 @@ void SpecificWorker::compute()
 		qDebug() << __FUNCTION__ << "Error capturing depth";
 	try
 	{ 
-		camerargbdsimpleyolopub_pubproxy->pubImage(fimage, depth, objs);
+		camerargbdsimpleyolopub_pubproxy->pushRGBDYolo(fimage, depth, objs);
 	}
 	catch(const Ice::Exception &e){std::cout << e << std::endl;}
 	fps.print();
