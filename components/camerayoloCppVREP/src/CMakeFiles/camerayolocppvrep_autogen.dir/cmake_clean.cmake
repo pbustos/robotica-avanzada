@@ -1,6 +1,7 @@
 file(REMOVE_RECURSE
+  "camerayolocppvrep_autogen"
+  "CMakeFiles/camerayolocppvrep_autogen.dir/AutogenOldSettings.cmake"
   "CMakeFiles/camerayolocppvrep_autogen"
-  "camerayolocppvrep_autogen/mocs_compilation.cpp"
 )
 
 # Per-language clean rules from dependency scanning.
