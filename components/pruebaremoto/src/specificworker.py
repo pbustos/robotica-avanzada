@@ -37,7 +37,7 @@ class SpecificWorker(GenericWorker):
 		super(SpecificWorker, self).__init__(proxy_map)
 
 		# Connect to VREP INNER-ARM
-		self.client = b0RemoteApi.RemoteApiClient('b0RemoteApi_pythonClient','b0RemoteApiAddOn')
+		#self.client = b0RemoteApi.RemoteApiClient('b0RemoteApi_pythonClient','b0RemoteApiAddOn')
 
 		# self.wall_camera = self.client.simxGetObjectHandle('Camera_Arm', self.client.simxServiceCall())
 		# self.target = self.client.simxGetObjectHandle('target', self.client.simxServiceCall())[1]
