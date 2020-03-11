@@ -111,21 +111,21 @@ void SpecificWorker::compute()
 	else
 		qDebug() << __FUNCTION__ << "Error capturing image";
 	
-	auto resDepth = client->simxGetVisionSensorDepthBuffer(hand_camera, true, true, client->simxServiceCall());
-	if( b0RemoteApi::readBool(resDepth, 0)) 
-	{
-		b0RemoteApi::readIntArray(resDepth, size, 1);
-		int dcols = size[0]; int drows = size[1]; int dlen = dcols*drows*4;  // OJO float size
-		depth.cameraID = 0;
-		depth.width = dcols; depth.height = drows; depth.focalx = 500; depth.focaly = 500; depth.alivetime = 0; 
-		depth.depth.resize(dlen); 
-		memcpy(&depth.depth[0], b0RemoteApi::readByteArray(resDepth, 2).data(), dlen);
-			}
-	else
-		qDebug() << __FUNCTION__ << "Error capturing depth";
+	// auto resDepth = client->simxGetVisionSensorDepthBuffer(hand_camera, true, true, client->simxServiceCall());
+	// if( b0RemoteApi::readBool(resDepth, 0)) 
+	// {
+	// 	b0RemoteApi::readIntArray(resDepth, size, 1);
+	// 	int dcols = size[0]; int drows = size[1]; int dlen = dcols*drows*4;  // OJO float size
+	// 	depth.cameraID = 0;
+	// 	depth.width = dcols; depth.height = drows; depth.focalx = 500; depth.focaly = 500; depth.alivetime = 0; 
+	// 	depth.depth.resize(dlen); 
+	// 	memcpy(&depth.depth[0], b0RemoteApi::readByteArray(resDepth, 2).data(), dlen);
+	// }
+	// else
+	// 	qDebug() << __FUNCTION__ << "Error capturing depth";
 	try
 	{ 
-		camerargbdsimpleyolopub_pubproxy->pushRGBDYolo(fimage, depth, objs);
+		//camerargbdsimpleyolopub_pubproxy->pushRGBDYolo(fimage, depth, objs);
 	}
 	catch(const Ice::Exception &e){std::cout << e << std::endl;}
 	fps.print();
