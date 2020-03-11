@@ -1,7 +1,7 @@
 CommonBehavior.Endpoints=tcp -p 10000
 
 # Proxies for required interfaces
-YoloServerProxy = yoloserver:tcp -h localhost -p 11010
+YoloServerProxy = yoloserver:tcp -h 192.168.1.11 -p 11010
 
 
 

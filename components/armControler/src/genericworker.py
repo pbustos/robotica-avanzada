@@ -44,30 +44,6 @@ except:
 	print('SLICE_PATH environment variable was not exported. Using only the default paths')
 	pass
 
-ice_JoystickAdapter = False
-for p in icePaths:
-	if os.path.isfile(p+'/JoystickAdapter.ice'):
-		preStr = "-I/opt/robocomp/interfaces/ -I"+ROBOCOMP+"/interfaces/ " + additionalPathStr + " --all "+p+'/'
-		wholeStr = preStr+"JoystickAdapter.ice"
-		Ice.loadSlice(wholeStr)
-		ice_JoystickAdapter = True
-		break
-if not ice_JoystickAdapter:
-	print('Couln\'t load JoystickAdapter')
-	sys.exit(-1)
-from RoboCompJoystickAdapter import *
-ice_CameraRGBDSimple = False
-for p in icePaths:
-	if os.path.isfile(p+'/CameraRGBDSimple.ice'):
-		preStr = "-I/opt/robocomp/interfaces/ -I"+ROBOCOMP+"/interfaces/ " + additionalPathStr + " --all "+p+'/'
-		wholeStr = preStr+"CameraRGBDSimple.ice"
-		Ice.loadSlice(wholeStr)
-		ice_CameraRGBDSimple = True
-		break
-if not ice_CameraRGBDSimple:
-	print('Couln\'t load CameraRGBDSimple')
-	sys.exit(-1)
-from RoboCompCameraRGBDSimple import *
 ice_YoloServer = False
 for p in icePaths:
 	if os.path.isfile(p+'/YoloServer.ice'):
@@ -92,6 +68,30 @@ if not ice_CameraRGBDSimpleYoloPub:
 	print('Couln\'t load CameraRGBDSimpleYoloPub')
 	sys.exit(-1)
 from RoboCompCameraRGBDSimpleYoloPub import *
+ice_JoystickAdapter = False
+for p in icePaths:
+	if os.path.isfile(p+'/JoystickAdapter.ice'):
+		preStr = "-I/opt/robocomp/interfaces/ -I"+ROBOCOMP+"/interfaces/ " + additionalPathStr + " --all "+p+'/'
+		wholeStr = preStr+"JoystickAdapter.ice"
+		Ice.loadSlice(wholeStr)
+		ice_JoystickAdapter = True
+		break
+if not ice_JoystickAdapter:
+	print('Couln\'t load JoystickAdapter')
+	sys.exit(-1)
+from RoboCompJoystickAdapter import *
+ice_CameraRGBDSimple = False
+for p in icePaths:
+	if os.path.isfile(p+'/CameraRGBDSimple.ice'):
+		preStr = "-I/opt/robocomp/interfaces/ -I"+ROBOCOMP+"/interfaces/ " + additionalPathStr + " --all "+p+'/'
+		wholeStr = preStr+"CameraRGBDSimple.ice"
+		Ice.loadSlice(wholeStr)
+		ice_CameraRGBDSimple = True
+		break
+if not ice_CameraRGBDSimple:
+	print('Couln\'t load CameraRGBDSimple')
+	sys.exit(-1)
+from RoboCompCameraRGBDSimple import *
 
 
 from camerargbdsimpleyolopubI import *
