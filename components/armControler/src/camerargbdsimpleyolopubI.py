@@ -60,5 +60,10 @@ class CameraRGBDSimpleYoloPubI(CameraRGBDSimpleYoloPub):
 	def __init__(self, worker):
 		self.worker = worker
 
+<<<<<<< HEAD
 	def pubImage(self, image, depth, objs, c):
 		return self.worker.CameraRGBDSimpleYoloPub_pubImage(image, depth, objs)
+=======
+	def pushRGBDYolo(self, im, dep, objs, c):
+		return self.worker.CameraRGBDSimpleYoloPub_pushRGBDYolo(im, dep, objs)
+>>>>>>> 647f8d819175fcd355ab352d73cdec4e1b84b2e7

@@ -27,6 +27,7 @@ import time
 import threading
 import cv2
 import numpy as np
+import copy
 
 #vrep
 import vrep
@@ -80,6 +81,9 @@ class SpecificWorker(GenericWorker):
 		self.joystickVector = {'x':0, 'y':0, 'z':0}
 		#bM.cartesian_Position_movement(self.base, self.base_cyclic, 0)
 		# MOVE ALSO THE INNER-ARM
+
+		self.innerYolo = []
+		self.outerYolo = []
 		
 		self.DISPLAY = True
 		self.JOYSTICK_EVENT = False
@@ -117,6 +121,7 @@ class SpecificWorker(GenericWorker):
 		
 		# Check if two new images + yolo have come
 		# Compute the difference between Yolo lists
+		listResta = restaListaYolo(self)
 		# Move, Add or Remove objects from INNER-MODEL
 
 
@@ -198,18 +203,41 @@ class SpecificWorker(GenericWorker):
 
 	## SUBSCRIPTION FROM CameraSimpleYoloPub ==================================
 	#
-	def CameraRGBDSimpleYoloPub_pubImage(self, image, depth, objs):
-		print ("New image ", len(image.image))	
+	def CameraRGBDSimpleYoloPub_pushRGBDYolo(self, image, depth, objs):
+		#print ("New image ", len(image.image), image.cameraID)	
+		if image.cameraID == 1:
+			self.innerYolo = copy.deepcopy(objs)
+		else:
+			self.outerYolo = copy.deepcopy(objs)
 
 
+# ################################################################################
+# ###  metodos auxiliares
+# ################################################################################
+from PySide2 import QtGui as qt
 
+def restaListaYolo(self):
+	listResta = []
 
-
-
-
-
-
-
+	print(self.innerYolo)
+	if self.innerYolo ==[]:
+		return self.outerYolo
+	elif self.outerYolo ==[]:
+		return self.innerYolo
+	else:
+		for objInner in self.innerYolo:
+			for objOuter in self.outerYolo:
+				if objInner.name != objOuter.name:
+					continue
+				else:
+					print('hi')
+					polygonInner = qt.QPolygon(qt.QRect(qt.QPoint(objInner.left, objInner.top), qt.QPoint(objInner.right, objInner.bot)))
+					polygonOuter = qt.QPolygon(qt.QRect(qt.QPoint(objOuter.left, objOuter.top), qt.QPoint(objOuter.right, objOuter.bot)))
+					if(polygonInner.intersects()):
+						pass
+					else: #si no intersecta 
+						listResta.append(objOuter) #introducimos el outer porque lo estamos comparando con el inner
+		return listResta
 
 
 # ################################################################################

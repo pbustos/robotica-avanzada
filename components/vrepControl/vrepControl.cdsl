@@ -1,0 +1,13 @@
+import "JoystickAdapter.idsl";
+import "CameraRGBDSimplePub.idsl";
+import "AprilTagsServer.idsl";
+Component vrepControler
+{
+    Communications
+    {
+        requires AprilTagsServer;
+        subscribesTo JoystickAdapter, CameraRGBDSimplePub;
+    };
+	language python;
+    statemachine "statemachine.smdsl";
+};
