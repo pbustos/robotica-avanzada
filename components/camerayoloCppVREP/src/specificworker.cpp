@@ -57,7 +57,9 @@ void SpecificWorker::initialize(int period)
 
    	client = new b0RemoteApi("b0RemoteApi_c++Client","b0RemoteApiAddOn");
 	qDebug() << __FUNCTION__ << "Connected";
+
 	auto handle_hand_camera = client->simxGetObjectHandle("Camera_Arm", client->simxServiceCall());
+	
 	if( b0RemoteApi::readBool(handle_hand_camera, 0))
 		hand_camera = b0RemoteApi::readInt(handle_hand_camera, 1);
 	else
@@ -85,7 +87,7 @@ void SpecificWorker::compute()
 	if(b0RemoteApi::readBool(resImg, 0))
 	{
 		b0RemoteApi::readIntArray(resImg, size, 1);
-		int cols = size[0]; int rows = size[1]; int len = cols*rows;
+		int cols = size[0]; int rows = size[1]; int depth = 3; int len = cols*rows*depth;
 		image.width = cols; image.height = rows; image.depth = 3; image.image.resize(len);
 		memcpy(&image.image[0], b0RemoteApi::readByteArray(resImg, 2).data(), len);
 

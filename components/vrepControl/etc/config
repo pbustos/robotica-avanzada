@@ -1,10 +1,10 @@
 # Endpoints for subscriptions
-CameraRGBDSimplePubTopic.Endpoints=tcp -p 0
-JoystickAdapterTopic.Endpoints=tcp -p 0
+CameraRGBDSimpleYoloPubTopic.Endpoints=tcp -p 15000
+JoystickAdapterTopic.Endpoints=tcp -p 15001
 
 
 # Proxies for required interfaces
-AprilTagsServerProxy = apriltagsserver:tcp -h localhost -p 0
+AprilTagsServerProxy = apriltagsserver:tcp -h localhost -p 12555
 
 
 

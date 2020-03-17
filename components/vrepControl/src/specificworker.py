@@ -20,6 +20,13 @@
 #
 
 from genericworker import *
+import cv2
+import math
+import time
+import numpy as np
+import vrep
+import b0RemoteApi
+import RoboCompCameraRGBDSimple as RoboCompCameraRGBDSimple
 
 class SpecificWorker(GenericWorker):
 	def __init__(self, proxy_map):
@@ -35,6 +42,9 @@ class SpecificWorker(GenericWorker):
 		self.Period = 50
 		self.timer.start(self.Period)
 
+		self.imageVREP = TImage()
+		self.DISPlAY = True
+
 		self.defaultMachine.start()
 		self.destroyed.connect(self.t_compute_to_finalize)
 
@@ -47,11 +57,26 @@ class SpecificWorker(GenericWorker):
 	@QtCore.Slot()
 	def compute(self):
 
+		# Check KoyStick
 		if self.JOYSTICK_EVENT:
 			print(self.joystickVector)
 			self.JOYSTICK_EVENT = False
 		
-		cv2.imshow("Gen3",self.imageVREP)
+		# Compute apriltags
+		try:
+			frame = Image(data = self.imageVREP.image, 
+						  frmt = Format(Mode.RGB888Packet,self.imageVREP.width, self.imageVREP.height, self.imageVREP.depth),
+						  timeStamp = time.time())
+			# 280 porque es la parte de negro que ocupa todo el png
+			tags_list = self.apriltagsserver_proxy.getAprilTags(frame=frame, tagsize=280, mfx=462, mfy=462);	
+		except Ice.Exception as ex:
+			print(ex)
+
+		if self.DISPlAY:
+			img = np.fromstring(self.imageVREP.image, np.uint8).reshape( self.imageVREP.height, self.imageVREP.width, self.imageVREP.depth)
+			cv2.imshow("Gen3", img)
+
+		# Now ACT
 
 		return True
 
@@ -71,7 +96,7 @@ class SpecificWorker(GenericWorker):
 	#
 	@QtCore.Slot()
 	def sm_compute(self):
-		print("Entered state compute")
+		#print("Entered state compute")
 		self.compute()
 		pass
 
@@ -91,9 +116,9 @@ class SpecificWorker(GenericWorker):
 	#
 	# SUBSCRIPTION to pushRGBD method from CameraRGBDSimplePub interface
 	#
-	def CameraRGBDSimplePub_pushRGBD(self, im, dep):
-		#print ("New image ", len(image.image), image.cameraID)	
-		self.imageVREP = image
+	def CameraRGBDSimpleYoloPub_pushRGBDYolo(self, im, dep, objs):
+		#print ("New image ", len(im.image), im.cameraID)	
+		self.imageVREP = im
 
 	#
 	# SUBSCRIPTION to sendData method from JoystickAdapter interface

@@ -4,7 +4,7 @@ INCLUDE( $ENV{ROBOCOMP}/cmake/modules/opencv3.cmake )
 SET ( SOURCES
   specificworker.cpp
   specificmonitor.cpp
-  /home/pbustos/Software/CoppeliaSim_Edu_V4_0_0_Ubuntu18_04/programming/b0RemoteApiBindings/cpp/b0RemoteApi.cpp
+  /home/robocomp/Software/CoppeliaSim_Edu_V4_0_0_Ubuntu18_04/programming/b0RemoteApiBindings/cpp/b0RemoteApi.cpp
 )
 
 # Headers set
