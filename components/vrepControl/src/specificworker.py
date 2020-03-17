@@ -21,16 +21,18 @@
 
 from genericworker import *
 
-# If RoboComp was compiled with Python bindings you can use InnerModel in Python
-# sys.path.append('/opt/robocomp/lib')
-# import librobocomp_qmat
-# import librobocomp_osgviewer
-# import librobocomp_innermodel
-
 class SpecificWorker(GenericWorker):
 	def __init__(self, proxy_map):
 		super(SpecificWorker, self).__init__(proxy_map)
-		self.Period = 2000
+
+		# Connect to VREP IK
+		self.client = b0RemoteApi.RemoteApiClient('b0RemoteApi_pythonClient','b0RemoteApiAddOn')
+		self.target = self.client.simxGetObjectHandle('target', self.client.simxServiceCall())[1]
+
+		self.DISPLAY = True
+		self.JOYSTICK_EVENT = False
+
+		self.Period = 50
 		self.timer.start(self.Period)
 
 		self.defaultMachine.start()
@@ -40,29 +42,16 @@ class SpecificWorker(GenericWorker):
 		print('SpecificWorker destructor')
 
 	def setParams(self, params):
-		#try:
-		#	self.innermodel = InnerModel(params["InnerModelPath"])
-		#except:
-		#	traceback.print_exc()
-		#	print("Error reading config params")
 		return True
 
 	@QtCore.Slot()
 	def compute(self):
-		print('SpecificWorker.compute...')
-		#computeCODE
-		#try:
-		#	self.differentialrobot_proxy.setSpeedBase(100, 0)
-		#except Ice.Exception as e:
-		#	traceback.print_exc()
-		#	print(e)
 
-		# The API of python-innermodel is not exactly the same as the C++ version
-		# self.innermodel.updateTransformValues('head_rot_tilt_pose', 0, 0, 0, 1.3, 0, 0)
-		# z = librobocomp_qmat.QVec(3,0)
-		# r = self.innermodel.transform('rgbd', z, 'laser')
-		# r.printvector('d')
-		# print(r[0], r[1], r[2])
+		if self.JOYSTICK_EVENT:
+			print(self.joystickVector)
+			self.JOYSTICK_EVENT = False
+		
+		cv2.imshow("Gen3",self.imageVREP)
 
 		return True
 
@@ -103,18 +92,35 @@ class SpecificWorker(GenericWorker):
 	# SUBSCRIPTION to pushRGBD method from CameraRGBDSimplePub interface
 	#
 	def CameraRGBDSimplePub_pushRGBD(self, im, dep):
-		#
-		#subscribesToCODE
-		#
-		pass
-
+		#print ("New image ", len(image.image), image.cameraID)	
+		self.imageVREP = image
 
 	#
 	# SUBSCRIPTION to sendData method from JoystickAdapter interface
 	#
 	def JoystickAdapter_sendData(self, data):
-		#
-		#subscribesToCODE
-		#
-		pass
+		#print("Data", data)
+		if hasattr(data,"buttons") and data.buttons[0].clicked == True:
+				self.joystickVector['x'] = 0
+				self.joystickVector['y'] = 0
+				self.joystickVector['z'] = 0
+				bM.cartesian_Position_movement(self.base, self.base_cyclic, 0)
+		else: 
+		
+			if abs([axis.value for axis in data.axes if axis.name == "x"][0]) < 0.2:
+				self.joystickVector['x'] = 0
+			else:
+				self.joystickVector['x'] = [axis.value for axis in data.axes if axis.name == "x"][0] / 10.0
+			
+			if abs([axis.value for axis in data.axes if axis.name == "y"][0]) < 0.2:
+				self.joystickVector['y'] = 0
+			else:
+				self.joystickVector['y'] = [axis.value for axis in data.axes if axis.name == "y"][0] / 10.0 
+			
+			if abs([axis.value for axis in data.axes if axis.name == "z"][0]) < 0.2:
+				self.joystickVector['z'] = 0
+			else:
+				self.joystickVector['z'] = [axis.value for axis in data.axes if axis.name == "z"][0] / 10.0
+			
+			self.JOYSTICK_EVENT = True
 

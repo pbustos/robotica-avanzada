@@ -1,5 +1,6 @@
 import "JoystickAdapter.idsl";
 import "CameraRGBDSimpleYoloPub.idsl";
+
 Component armControler
 {
     Communications
