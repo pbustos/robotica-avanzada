@@ -88,6 +88,7 @@ void SpecificWorker::compute()
 		int cols = size[0]; int rows = size[1]; int len = cols*rows;
 		image.width = cols; image.height = rows; image.depth = 3; image.image.resize(len);
 		memcpy(&image.image[0], b0RemoteApi::readByteArray(resImg, 2).data(), len);
+
 		if(YOLO)
 		{
 			try
@@ -131,7 +132,7 @@ void SpecificWorker::compute()
 	}
 	try
 	{ 
-		//camerargbdsimpleyolopub_pubproxy->pushRGBDYolo(fimage, depth, objs);
+		camerargbdsimpleyolopub_pubproxy->pushRGBDYolo(fimage, depth, objs);
 	}
 	catch(const Ice::Exception &e){std::cout << e << std::endl;}
 	fps.print();

@@ -9,7 +9,7 @@ YoloServerProxy = yoloserver:tcp -h localhost -p 11010
 TopicManager.Proxy=IceStorm/TopicManager:default -p 9999
 
 InnerModelPath = innermodel.xml
-ShowImage=false
+ShowImage=true
 Yolo=false
 Depth=false
 
