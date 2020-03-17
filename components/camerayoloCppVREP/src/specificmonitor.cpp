@@ -90,6 +90,13 @@ void SpecificMonitor::readConfig(RoboCompCommonBehavior::ParameterList &params )
 	aux.editable = true;
 	configGetString( "","ShowImage", aux.value, "false");
 	params["ShowImage"] = aux;
+
+	configGetString( "","Yolo", aux.value, "false");
+	params["Yolo"] = aux;
+	
+	configGetString( "","Depth", aux.value, "false");
+	params["Depth"] = aux;
+
 }
 
 //Check parameters and transform them to worker structure

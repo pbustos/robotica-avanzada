@@ -66,6 +66,8 @@ private:
 	b0RemoteApi *client;
 	FPSCounter fps;
 	bool SHOW_IMAGE = false;
+	bool YOLO = false;
+	bool DEPTH = false;
 };
 
 #endif

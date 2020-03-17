@@ -10,6 +10,8 @@ TopicManager.Proxy=IceStorm/TopicManager:default -p 9999
 
 InnerModelPath = innermodel.xml
 ShowImage=false
+Yolo=false
+Depth=false
 
 Ice.Warn.Connections=0
 Ice.Trace.Network=0
