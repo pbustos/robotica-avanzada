@@ -64,11 +64,11 @@ void SpecificWorker::initialize(int period)
 		hand_camera = b0RemoteApi::readInt(handle_hand_camera, 1);
 	else
 		qFatal("Error getting handle to hand-camera");
-	auto handle_hand_target = client->simxGetObjectHandle("target", client->simxServiceCall());
-	if( b0RemoteApi::readBool(handle_hand_target, 0))
-		hand_target = b0RemoteApi::readInt(handle_hand_target, 1);
-	else
-		qFatal("Error getting handle to target");
+	// auto handle_hand_target = client->simxGetObjectHandle("target", client->simxServiceCall());
+	// if( b0RemoteApi::readBool(handle_hand_target, 0))
+	// 	hand_target = b0RemoteApi::readInt(handle_hand_target, 1);
+	// else
+	// 	qFatal("Error getting handle to target");
 	
 	this->Period = period;
 	timer.start(50);
