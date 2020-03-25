@@ -2,14 +2,16 @@
 /* CHANGE THE NAME OF THE MACHINE IF YOU MAKE
    ANY CHANGE TO THE DEFAULT STATES OR TRANSITIONS */
 
-defaultMachine{
-    states compute;
-    initial_state initialize;
-    end_state finalize;
+Maq1FirtsMovement{
+    states detectarObjetos, moverBrazo, cogerObjeto, dejarObjeto;
+    initial_state inicializar;
+    end_state finalizar;
     transitions{
-        initialize => compute;
-        compute => compute;
-        compute => finalize;
+        inicializar => detectarObjetos;
+	detectarObjetos => detectarObjetos, moverBrazo, cogerObjeto;
+	moverBrazo => detectarObjetos, moverBrazo, cogerObjeto, dejarObjeto;
+	cogerObjeto => moverBrazo, dejarObjeto;
+	dejarObjeto=> moverBrazo, finalizar;
     };
 };
 

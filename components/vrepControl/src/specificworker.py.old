@@ -31,17 +31,22 @@ import RoboCompCameraRGBDSimple as RoboCompCameraRGBDSimple
 class SpecificWorker(GenericWorker):
 	def __init__(self, proxy_map):
 		super(SpecificWorker, self).__init__(proxy_map)
-		self.Period = 2000
-		self.timer.start(self.Period)
 
 		# Connect to VREP IK
 		self.client = b0RemoteApi.RemoteApiClient('b0RemoteApi_pythonClient','b0RemoteApiAddOn')
 		self.target = self.client.simxGetObjectHandle('target', self.client.simxServiceCall())[1]
-		self.base = self.client.simxGetObjectHandle('gen3', self.client.simxServiceCall())[1]
-		#self.imageVREP = TImage()
 
-		self.Maq1FirtsMovement.start()
-		self.destroyed.connect(self.t_dejarObjeto_to_finalizar)
+		self.DISPLAY = True
+		self.JOYSTICK_EVENT = False
+
+		self.Period = 50
+		self.timer.start(self.Period)
+
+		self.imageVREP = TImage()
+		self.DISPlAY = True
+
+		self.defaultMachine.start()
+		self.destroyed.connect(self.t_compute_to_finalize)
 
 	def __del__(self):
 		print('SpecificWorker destructor')
@@ -49,13 +54,15 @@ class SpecificWorker(GenericWorker):
 	def setParams(self, params):
 		return True
 
-	def detectarObjetos(self):
-		#posicion de reconocimiento
-		self.client.simxSetObjectPose(self.target, self.base, [0.01, -0.35, 0.53, 0.0, 0.0, 0.0, 0.0], self.client.simxServiceCall())		
+	@QtCore.Slot()
+	def compute(self):
 
-		#deteccion de objeto (no salir hasta que pos objeto != pos target)
-		'''
-		#april tags
+		# Check KoyStick
+		if self.JOYSTICK_EVENT:
+			print(self.joystickVector)
+			self.JOYSTICK_EVENT = False
+		
+		# Compute apriltags
 		try:
 			frame = Image(data = self.imageVREP.image, 
 						  frmt = Format(Mode.RGB888Packet,self.imageVREP.width, self.imageVREP.height, self.imageVREP.depth),
@@ -65,94 +72,47 @@ class SpecificWorker(GenericWorker):
 		except Ice.Exception as ex:
 			print(ex)
 
-		print(tags_list)
-		'''
-		
-		#transformacion en las coordenadas de la base
-		self.listCoordenadaObjeto = []
+		if self.DISPlAY:
+			img = np.fromstring(self.imageVREP.image, np.uint8).reshape( self.imageVREP.height, self.imageVREP.width, self.imageVREP.depth)
+			cv2.imshow("Gen3", img)
 
-		return True, self.listCoordenadaObjeto
+		# Now ACT
 
-	def moverBrazo(self):
-		#ejes x, z
-		self.client.simxSetObjectPose(self.target, self.base, self.listCoordenadasObjeto, self.client.simxServiceCall())
-
-		#bajamos el brazo poco a poco (detecta la taza ??)
-		#bucle
-		#posicion = self.client.simxGetObjectPosition(self.target, self.base, self.client.simxServiceCall())[1]
-		#posicion de reconocimiento
-		#self.client.simxSetObjectPose(self.target, self.base, [0.01, -0.35, 0.53, 0.0, 0.0, 0.0, 0.0], self.client.simxServiceCall())
-		# 
-	def cogerObjeto(self):
-		#cerramos las pinzas
-		pass
-
-	def dejarObjeto(self):
-		#movemos el brazo a esa posicion objetivo
-		self.client.simxSetObjectPose(self.target, self.base, self.listCoordenadasObjeto, self.client.simxServiceCall())
-		#abrimos pinzas
-
-
-
+		return True
 
 # =============== Slots methods for State Machine ===================
 # ===================================================================
 	#
-	# sm_inicializar
+	# sm_initialize
 	#
 	@QtCore.Slot()
-	def sm_inicializar(self):
-		print("Entered state inicializar")
-		self.t_inicializar_to_detectarObjetos.emit()
+	def sm_initialize(self):
+		print("Entered state initialize")
+		self.t_initialize_to_compute.emit()
 		pass
 
 	#
-	# sm_cogerObjeto
+	# sm_compute
 	#
 	@QtCore.Slot()
-	def sm_cogerObjeto(self):
-		print("Entered state cogerObjeto")
-		self.cogerObjeto()
+	def sm_compute(self):
+		#print("Entered state compute")
+		self.compute()
 		pass
 
 	#
-	# sm_dejarObjeto
+	# sm_finalize
 	#
 	@QtCore.Slot()
-	def sm_dejarObjeto(self):
-		print("Entered state dejarObjeto")
-		self.dejarObjeto()
-		pass
-
-	#
-	# sm_detectarObjetos
-	#
-	@QtCore.Slot()
-	def sm_detectarObjetos(self):
-		print("Entered state detectarObjetos")
-		self.detectarObjetos()
-		pass
-
-	#
-	# sm_moverBrazo
-	#
-	@QtCore.Slot()
-	def sm_moverBrazo(self):
-		print("Entered state moverBrazo")
-		self.moverBrazo()
-		pass
-
-	#
-	# sm_finalizar
-	#
-	@QtCore.Slot()
-	def sm_finalizar(self):
-		print("Entered state finalizar")
+	def sm_finalize(self):
+		print("Entered state finalize")
 		pass
 
 
 # =================================================================
 # =================================================================
+
+
 	#
 	# SUBSCRIPTION to pushRGBD method from CameraRGBDSimplePub interface
 	#
