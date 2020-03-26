@@ -38,6 +38,7 @@ class SpecificWorker(GenericWorker):
 		self.client = b0RemoteApi.RemoteApiClient('b0RemoteApi_pythonClient','b0RemoteApiAddOn')
 		self.target = self.client.simxGetObjectHandle('target', self.client.simxServiceCall())[1]
 		self.base = self.client.simxGetObjectHandle('gen3', self.client.simxServiceCall())[1]
+		self.camera_arm = self.client.simxGetObjectHandle('Camera_Arm', self.client.simxServiceCall())[1]
 		#self.imageVREP = TImage()
 
 		self.Maq1FirtsMovement.start()
@@ -52,6 +53,14 @@ class SpecificWorker(GenericWorker):
 	def detectarObjetos(self):
 		#posicion de reconocimiento
 		self.client.simxSetObjectPose(self.target, self.base, [0.01, -0.35, 0.53, 0.0, 0.0, 0.0, 0.0], self.client.simxServiceCall())		
+		print("gola")
+		res, resolution, imageVREP = self.client.simxGetVisionSensorImage(self.camera_arm, False, self.client.simxServiceCall())
+		img = np.fromstring(imageVREP, np.uint8).reshape( resolution[1],resolution[0], 3)
+		# yimg = yolo.TImage(width=resu[0], height=resu[1], depth=3, image=img)
+		cv2.imshow("Gen3",img)
+		cv2.waitKey(1)
+		
+		self.getAprilTags(imageVREP, resolution)
 
 		#deteccion de objeto (no salir hasta que pos objeto != pos target)
 		'''
@@ -71,7 +80,8 @@ class SpecificWorker(GenericWorker):
 		#transformacion en las coordenadas de la base
 		self.listCoordenadaObjeto = []
 
-		return True, self.listCoordenadaObjeto
+		
+		#return True, self.listCoordenadaObjeto
 
 	def moverBrazo(self):
 		#ejes x, z
@@ -92,8 +102,22 @@ class SpecificWorker(GenericWorker):
 		self.client.simxSetObjectPose(self.target, self.base, self.listCoordenadasObjeto, self.client.simxServiceCall())
 		#abrimos pinzas
 
-
-
+	def getAprilTags(self, image, resolution):
+		try:
+			frame = Image()
+			#frame.data = img.flatten()
+			frame.data = image
+			frame.frmt = Format(Mode.RGB888Packet, resolution[0], resolution[1], 3)
+			frame.timeStamp = time.time()
+			# 280 porque es la parte de negro que ocupa todo el png
+			tags_list = self.apriltagsserver_proxy.getAprilTags(frame=frame, tagsize=280, mfx=462, mfy=462);
+			if len(tags_list) > 0:
+				dist = np.sqrt(tags_list[0].tx*tags_list[0].tx+tags_list[0].ty*tags_list[0].ty+tags_list[0].tz*tags_list[0].tz)
+			else:
+				dist = 0
+			print(frame.timeStamp, tags_list,dist)
+		except Ice.Exception as ex:
+			print(ex)
 
 # =============== Slots methods for State Machine ===================
 # ===================================================================
@@ -131,7 +155,7 @@ class SpecificWorker(GenericWorker):
 	def sm_detectarObjetos(self):
 		print("Entered state detectarObjetos")
 		self.detectarObjetos()
-		pass
+		self.t_detectarObjetos_to_detectarObjetos.emit()
 
 	#
 	# sm_moverBrazo

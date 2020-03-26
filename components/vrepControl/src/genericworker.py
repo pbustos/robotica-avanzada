@@ -137,7 +137,7 @@ class GenericWorker(QtCore.QObject):
 
 		
 		self.mutex = QtCore.QMutex(QtCore.QMutex.Recursive)
-		self.Period = 30
+		self.Period = 100
 		self.timer = QtCore.QTimer(self)
 
 #State Machine
