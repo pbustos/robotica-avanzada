@@ -52,7 +52,7 @@ class SpecificWorker(GenericWorker):
 	def setParams(self, params):
 		return True
 
-	def detectarObjetos(self):
+	def detectarObjetos(self):	
 		#posicion de reconocimiento
 		#self.client.simxSetObjectPose(self.target, self.base, [0.01, -0.35, 0.53, 0.0, 0.0, 0.0, 0.0], self.client.simxServiceCall())		
 		
@@ -126,6 +126,7 @@ class SpecificWorker(GenericWorker):
 	@QtCore.Slot()
 	def sm_inicializar(self):
 		print("Entered state inicializar")
+		#self.client.simxSetObjectPose(self.target, self.base, [0.01, -0.35, 0.53, 0.0, 0.0, 180.0, 0.0], self.client.simxServiceCall())		
 		self.t_inicializar_to_detectarObjetos.emit()
 		pass
 
