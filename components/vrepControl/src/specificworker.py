@@ -52,6 +52,27 @@ class SpecificWorker(GenericWorker):
 	def setParams(self, params):
 		return True
 
+	def detectCircles(self, orig):
+		gray = cv2.cvtColor(orig, cv2.COLOR_BGR2GRAY)
+		# detect circles in the image
+
+		circles = cv2.HoughCircles(gray, cv2.HOUGH_GRADIENT, 1.8, 100)
+		# ensure at least some circles were found
+		if circles is not None:
+			print("guau")
+			# convert the (x, y) coordinates and radius of the circles to integers
+			circles = np.round(circles[0, :]).astype("int")
+			# loop over the (x, y) coordinates and radius of the circles
+			for (x, y, r) in circles:
+			# draw the circle in the output image, then draw a rectangle
+			# corresponding to the center of the circle
+				cv2.circle(orig, (x, y), r, (0, 255, 0), 4)
+				cv2.rectangle(orig, (x - 5, y - 5), (x + 5, y + 5), (0, 128, 255), -1)
+			# show the output image
+		return orig, circles
+			
+	########################################################################
+
 	def detectarObjetos(self):	
 		#posicion de reconocimiento
 		#self.client.simxSetObjectPose(self.target, self.base, [0.01, -0.35, 0.53, 0.0, 0.0, 0.0, 0.0], self.client.simxServiceCall())		
@@ -63,28 +84,27 @@ class SpecificWorker(GenericWorker):
 		# capture image
 		res, resolution, imageVREP = self.client.simxGetVisionSensorImage(self.camera_arm, False, self.client.simxServiceCall())
 		img = np.fromstring(imageVREP, np.uint8).reshape( resolution[1],resolution[0], 3)
+		img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
 		img = cv2.flip(img, 0)
-		cv2.imshow("Gen3",img)
-		cv2.waitKey(1)
+		img, circles = self.detectCircles(img)
 		
-		listaObjetos = self.getAprilTags(img, resolution)
-		if listaObjetos:
-			l = listaObjetos[0]
+		if circles is not None:
+			cx, cy, cr = circles[0]
 			target = self.client.simxGetObjectPose(self.target, self.base, self.client.simxServiceCall())[1]
-			#objActual = np.array([listaObjetos[0].tx, listaObjetos[0].ty, listaObjetos[0].tz]) / 1000.
-			objActual = np.array([listaObjetos[0].cx, listaObjetos[0].cy])
+			objActual = np.array([cx, cy])
 			diffPos = np.array([320, 240.]) - objActual
-			height = l.tz/1000.
-			print(diffPos, "----" , height, target[2] )
+			# 	height = l.tz/1000.
+			print(diffPos)
 			try:
 				target[0] = target[0] + ( diffPos[0] * 0.0005 )
 				target[1] = target[1] - ( diffPos[1] * 0.0005 )
-				target[2] = target[2] - ( height * 0.05 )
-				
+				target[2] = target[2] - ( target[2] * 0.005 )
 				self.client.simxSetObjectPose(self.target, self.base, target, self.client.simxServiceCall())
 			except:
 				print("Sometginh went wrong")
 				
+		cv2.imshow("Gen3", img)
+		cv2.waitKey(1)
 			
 	def moverBrazo(self):
 		# mover hasta centrar sobre pieza
@@ -155,7 +175,7 @@ class SpecificWorker(GenericWorker):
 	def sm_detectarObjetos(self):
 		print("Entered state detectarObjetos")
 		ready_to_godown = self.detectarObjetos()
-		time.sleep(0.1)
+		#time.sleep(0.05)
 		self.t_detectarObjetos_to_detectarObjetos.emit()
 		
 	# sm_moverBrazo
