@@ -50,38 +50,32 @@ class SpecificWorker(GenericWorker):
 	def setParams(self, params):
 		return True
 
-	def detectarObjetos(self):
+	def detectarObjetos(self):	
 		#posicion de reconocimiento
-		self.client.simxSetObjectPose(self.target, self.base, [0.01, -0.35, 0.53, 0.0, 0.0, 0.0, 0.0], self.client.simxServiceCall())		
-		print("gola")
+		#self.client.simxSetObjectPose(self.target, self.base, [0.01, -0.35, 0.53, 0.0, 0.0, 180.0, 0.0], self.client.simxServiceCall())		
 		res, resolution, imageVREP = self.client.simxGetVisionSensorImage(self.camera_arm, False, self.client.simxServiceCall())
-		img = np.fromstring(imageVREP, np.uint8).reshape( resolution[1],resolution[0], 3)
+		img = np.fromstring(imageVREP, np.uint8).reshape(resolution[1],resolution[0], 3)
+		img = cv2.flip(img,0)
 		# yimg = yolo.TImage(width=resu[0], height=resu[1], depth=3, image=img)
 		cv2.imshow("Gen3",img)
 		cv2.waitKey(1)
-		
-		self.getAprilTags(imageVREP, resolution)
+		self.listObjetos = self.getAprilTags(img, resolution)
 
+		if self.listObjetos:
+			posActual = self.client.simxGetObjectPose(self.target, self.base, self.client.simxServiceCall())[1]
+			listCoordObj = [posActual[0] - self.listObjetos[0].tx, 
+							posActual[1] - self.listObjetos[0].ty, 
+							posActual[2] - self.listObjetos[0].tz, 
+							posActual[3], 
+							posActual[4], 
+							posActual[5]]
 		#deteccion de objeto (no salir hasta que pos objeto != pos target)
-		'''
-		#april tags
-		try:
-			frame = Image(data = self.imageVREP.image, 
-						  frmt = Format(Mode.RGB888Packet,self.imageVREP.width, self.imageVREP.height, self.imageVREP.depth),
-						  timeStamp = time.time())
-			# 280 porque es la parte de negro que ocupa todo el png
-			tags_list = self.apriltagsserver_proxy.getAprilTags(frame=frame, tagsize=280, mfx=462, mfy=462);	
-		except Ice.Exception as ex:
-			print(ex)
-
-		print(tags_list)
-		'''
 		
 		#transformacion en las coordenadas de la base
-		self.listCoordenadaObjeto = []
+			self.client.simxSetObjectPose(self.target, self.base, listCoordObj, self.client.simxServiceCall())
 
 		
-		#return True, self.listCoordenadaObjeto
+		#return True
 
 	def moverBrazo(self):
 		#ejes x, z
@@ -105,17 +99,17 @@ class SpecificWorker(GenericWorker):
 	def getAprilTags(self, image, resolution):
 		try:
 			frame = Image()
-			#frame.data = img.flatten()
-			frame.data = image
+			frame.data = image.flatten()
+			#frame.data = image
 			frame.frmt = Format(Mode.RGB888Packet, resolution[0], resolution[1], 3)
 			frame.timeStamp = time.time()
-			# 280 porque es la parte de negro que ocupa todo el png
-			tags_list = self.apriltagsserver_proxy.getAprilTags(frame=frame, tagsize=280, mfx=462, mfy=462);
+			tags_list = self.apriltagsserver_proxy.getAprilTags(frame=frame, tagsize=0.04, mfx=554, mfy=554)
 			if len(tags_list) > 0:
 				dist = np.sqrt(tags_list[0].tx*tags_list[0].tx+tags_list[0].ty*tags_list[0].ty+tags_list[0].tz*tags_list[0].tz)
 			else:
 				dist = 0
 			print(frame.timeStamp, tags_list,dist)
+			return tags_list
 		except Ice.Exception as ex:
 			print(ex)
 
@@ -127,6 +121,7 @@ class SpecificWorker(GenericWorker):
 	@QtCore.Slot()
 	def sm_inicializar(self):
 		print("Entered state inicializar")
+		#self.client.simxSetObjectPose(self.target, self.base, [0.01, -0.35, 0.53, 0.0, 0.0, 180.0, 0.0], self.client.simxServiceCall())		
 		self.t_inicializar_to_detectarObjetos.emit()
 		pass
 
