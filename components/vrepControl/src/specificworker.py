@@ -31,7 +31,7 @@ import RoboCompCameraRGBDSimple as RoboCompCameraRGBDSimple
 class SpecificWorker(GenericWorker):
 	def __init__(self, proxy_map):
 		super(SpecificWorker, self).__init__(proxy_map)
-		self.Period = 300
+		self.Period = 50
 		self.timer.timeout.connect(self.detectarObjetos)
 		self.timer.start(self.Period)
 
