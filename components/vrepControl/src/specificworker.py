@@ -31,20 +31,24 @@ import RoboCompCameraRGBDSimple as RoboCompCameraRGBDSimple
 class SpecificWorker(GenericWorker):
 	def __init__(self, proxy_map):
 		super(SpecificWorker, self).__init__(proxy_map)
-		self.Period = 2000
+		self.Period = 300
+		self.timer.timeout.connect(self.detectarObjetos)
 		self.timer.start(self.Period)
 
 		# Connect to VREP IK
 		self.client = b0RemoteApi.RemoteApiClient('b0RemoteApi_pythonClient','b0RemoteApiAddOn')
 		self.target = self.client.simxGetObjectHandle('target', self.client.simxServiceCall())[1]
 		self.base = self.client.simxGetObjectHandle('gen3', self.client.simxServiceCall())[1]
-		self.camera_arm = self.client.simxGetObjectHandle('Camera_Arm', self.client.simxServiceCall())[1]
+		#self.camera_arm = self.client.simxGetObjectHandle('Camera_Arm', self.client.simxServiceCall())[1]
+		self.camera_arm = self.client.simxGetObjectHandle('camera_in_hand', self.client.simxServiceCall())[1]
+		
 		#self.imageVREP = TImage()
 
-		self.Maq1FirtsMovement.start()
+		#self.Maq1FirtsMovement.start()
 		self.destroyed.connect(self.t_dejarObjeto_to_finalizar)
 
 		self.JOYSTICK_EVENT = False
+		print("Leaving Init")
 
 	def __del__(self):
 		print('SpecificWorker destructor')
@@ -73,6 +77,7 @@ class SpecificWorker(GenericWorker):
 			
 	########################################################################
 
+	@QtCore.Slot()	
 	def detectarObjetos(self):	
 		#posicion de reconocimiento
 		#self.client.simxSetObjectPose(self.target, self.base, [0.01, -0.35, 0.53, 0.0, 0.0, 0.0, 0.0], self.client.simxServiceCall())		
