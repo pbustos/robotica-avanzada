@@ -1,0 +1,11 @@
+import "CameraRGBDSimple.idsl";
+
+Component rodcontrol
+{
+  Communications
+  {
+    requires CameraRGBDSimple;
+  };
+  language python;
+  statemachine "statemachine.smdsl";
+};
