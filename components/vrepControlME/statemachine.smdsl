@@ -1,0 +1,42 @@
+
+/* CHANGE THE NAME OF THE MACHINE IF YOU MAKE
+   ANY CHANGE TO THE DEFAULT STATES OR TRANSITIONS */
+
+Maq1FirtsMovement{
+    states detectarObjetos, moverBrazo, cogerObjeto, dejarObjeto;
+    initial_state inicializar;
+    end_state finalizar;
+    transitions{
+        inicializar => detectarObjetos;
+	detectarObjetos => detectarObjetos, moverBrazo, cogerObjeto;
+	moverBrazo => detectarObjetos, moverBrazo, cogerObjeto, dejarObjeto;
+	cogerObjeto => moverBrazo, dejarObjeto;
+	dejarObjeto=> moverBrazo, finalizar;
+    };
+};
+
+
+/* --------------------------------------------------------------
+   This is the accepted syntax for the State Machine definition 
+
+name_machine{
+    [states name_state *[, name_state];]
+    [initial_state name_state;]
+    [end_state name_state;]
+    [transitions{
+        name_state => name_state *[, name_state];
+        *[name_state => name_state *[, name_state];]
+    };]
+};
+
+[:parent_state [parallel]{
+    states name_state *[, name_state];
+    [initial_state name_state;]
+    [end_state name_state;]
+    [transitions{
+        name_state => name_state *[, name_state];
+        *[name_state => name_state *[, name_state];]
+    };]
+};]
+
+------------------------------------------------------------------ */
