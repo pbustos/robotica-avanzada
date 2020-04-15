@@ -32,18 +32,13 @@ class SpecificWorker(GenericWorker):
 	def __init__(self, proxy_map):
 		super(SpecificWorker, self).__init__(proxy_map)
 		self.Period = 50
-		#self.timer.timeout.connect(self.detectarObjetos)
 		self.timer.start(self.Period)
 
 		# Connect to VREP IK
 		self.client = b0RemoteApi.RemoteApiClient('b0RemoteApi_pythonClient','b0RemoteApiAddOn')
 		self.target = self.client.simxGetObjectHandle('target', self.client.simxServiceCall())[1]
 		self.base = self.client.simxGetObjectHandle('gen3', self.client.simxServiceCall())[1]
-		self.grippers = self.client.simxGetObjectHandle('ROBOTIQ_85', self.client.simxServiceCall())[1]
-		#self.camera_arm = self.client.simxGetObjectHandle('Camera_Arm', self.client.simxServiceCall())[1]
 		self.camera_arm = self.client.simxGetObjectHandle('camera_in_hand', self.client.simxServiceCall())[1]
-		
-		#self.imageVREP = TImage()
 
 		self.Maq1FirtsMovement.start()
 		self.destroyed.connect(self.t_dejarObjeto_to_finalizar)
@@ -126,12 +121,16 @@ class SpecificWorker(GenericWorker):
 
 	def cogerObjeto(self):
 		#cerramos las pinzas
+		self.client.simxCallScriptFunction("closeGripper@gen3", 1,0,self.client.simxServiceCall())
+		#levantamos un poco el brazo
+		self.client.simxSetObjectPose(self.target, self.base, self.listCoordenadasObjeto, self.client.simxServiceCall())
 		pass
 
 	def dejarObjeto(self):
 		#movemos el brazo a esa posicion objetivo
 		self.client.simxSetObjectPose(self.target, self.base, self.listCoordenadasObjeto, self.client.simxServiceCall())
 		#abrimos pinzas
+		self.client.simxCallScriptFunction("openGripper@gen3", 1,0,self.client.simxServiceCall())
 
 	def getAprilTags(self, image, resolution):
 		try:

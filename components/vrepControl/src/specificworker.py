@@ -38,6 +38,8 @@ class SpecificWorker(GenericWorker):
 		# Connect to VREP IK
 		self.client = b0RemoteApi.RemoteApiClient('b0RemoteApi_pythonClient','b0RemoteApiAddOn')
 		self.target = self.client.simxGetObjectHandle('target', self.client.simxServiceCall())[1]
+		self.pivote = self.client.simxGetObjectHandle('PivoteApproach', self.client.simxServiceCall())[1]
+		self.biela = self.client.simxGetObjectHandle('BielaApproach', self.client.simxServiceCall())[1]
 		self.base = self.client.simxGetObjectHandle('gen3', self.client.simxServiceCall())[1]
 		#self.camera_arm = self.client.simxGetObjectHandle('Camera_Arm', self.client.simxServiceCall())[1]
 		self.camera_arm = self.client.simxGetObjectHandle('camera_in_hand', self.client.simxServiceCall())[1]
@@ -87,6 +89,7 @@ class SpecificWorker(GenericWorker):
 		# 	self.JOYSTICK_EVENT = False
 
 		# capture image
+		'''
 		res, resolution, imageVREP = self.client.simxGetVisionSensorImage(self.camera_arm, False, self.client.simxServiceCall())
 		img = np.fromstring(imageVREP, np.uint8).reshape( resolution[1],resolution[0], 3)
 		img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
@@ -110,6 +113,43 @@ class SpecificWorker(GenericWorker):
 				
 		cv2.imshow("Gen3", img)
 		cv2.waitKey(1)
+		'''
+		import time
+		import numpy as np
+		print("Entrando moverse a biela")
+		while True:
+			self.client.simxCallScriptFunction("moveToObjectHandle@gen3", 1,self.biela,self.client.simxServiceCall())
+			PosActual = self.client.simxGetObjectPose(self.target, self.base, self.client.simxServiceCall())[1]
+			PosObj = self.client.simxGetObjectPose(self.biela, self.base, self.client.simxServiceCall())[1]
+			result = np.abs(np.array(PosActual) - np.array(PosObj))
+			print(PosActual, PosObj, result)
+			if(result[0] < 0.1 and result[1] < 0.1 and result[2] < 0.1 ):
+				break
+		time.sleep(20)
+		print("Saliendo moverse a biela")
+		
+		print("Entrando cerrando pinzas")
+		self.client.simxCallScriptFunction("closeGripper@gen3", 1,0,self.client.simxServiceCall())
+		print("Saliendo cerrando pinzas")
+		time.sleep(20)
+		
+		while True:
+			self.client.simxCallScriptFunction("moveToObjectHandle@gen3", 1,self.pivote,self.client.simxServiceCall())
+			PosActual = self.client.simxGetObjectPose(self.target, self.base, self.client.simxServiceCall())[1]
+			PosObj = self.client.simxGetObjectPose(self.pivote, self.base, self.client.simxServiceCall())[1]
+			result = np.abs(np.array(PosActual) - np.array(PosObj))
+			print(PosActual, PosObj, result)
+			if(result[0] < 0.1 and result[1] < 0.1 and result[2] < 0.1 ):
+				break
+		time.sleep(30)
+		
+		print("Entrando abriendo pinzas")
+		self.client.simxCallScriptFunction("openGripper@gen3", 1,0,self.client.simxServiceCall())
+		print("Saliendo abriendo pinzas")
+		time.sleep(20)
+		
+
+		
 			
 	def moverBrazo(self):
 		# mover hasta centrar sobre pieza
@@ -151,7 +191,6 @@ class SpecificWorker(GenericWorker):
 	@QtCore.Slot()
 	def sm_inicializar(self):
 		print("Entered state inicializar")
-		#self.client.simxSetObjectPose(self.target, self.base, [0.01, -0.35, 0.53, 0.0, 0.0, 180.0, 0.0], self.client.simxServiceCall())		
 		self.t_inicializar_to_detectarObjetos.emit()
 		pass
 
