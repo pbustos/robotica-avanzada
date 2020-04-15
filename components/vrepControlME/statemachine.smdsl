@@ -7,11 +7,11 @@ Maq1FirtsMovement{
     initial_state inicializar;
     end_state finalizar;
     transitions{
-        inicializar => detectarObjetos;
+        inicializar => detectarObjetos, moverBrazo;
 	detectarObjetos => detectarObjetos, moverBrazo, cogerObjeto;
 	moverBrazo => detectarObjetos, moverBrazo, cogerObjeto, dejarObjeto;
-	cogerObjeto => moverBrazo, dejarObjeto;
-	dejarObjeto=> moverBrazo, finalizar;
+	cogerObjeto => cogerObjeto, moverBrazo, dejarObjeto;
+	dejarObjeto=> dejarObjeto, moverBrazo, finalizar, inicializar;
     };
 };
 

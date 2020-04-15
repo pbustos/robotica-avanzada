@@ -44,18 +44,6 @@ except:
 	print('SLICE_PATH environment variable was not exported. Using only the default paths')
 	pass
 
-ice_CameraRGBDSimpleYoloPub = False
-for p in icePaths:
-	if os.path.isfile(p+'/CameraRGBDSimpleYoloPub.ice'):
-		preStr = "-I/opt/robocomp/interfaces/ -I"+ROBOCOMP+"/interfaces/ " + additionalPathStr + " --all "+p+'/'
-		wholeStr = preStr+"CameraRGBDSimpleYoloPub.ice"
-		Ice.loadSlice(wholeStr)
-		ice_CameraRGBDSimpleYoloPub = True
-		break
-if not ice_CameraRGBDSimpleYoloPub:
-	print('Couln\'t load CameraRGBDSimpleYoloPub')
-	sys.exit(-1)
-from RoboCompCameraRGBDSimpleYoloPub import *
 ice_JoystickAdapter = False
 for p in icePaths:
 	if os.path.isfile(p+'/JoystickAdapter.ice'):
@@ -68,30 +56,18 @@ if not ice_JoystickAdapter:
 	print('Couln\'t load JoystickAdapter')
 	sys.exit(-1)
 from RoboCompJoystickAdapter import *
-ice_YoloServer = False
+ice_CameraRGBDSimpleYoloPub = False
 for p in icePaths:
-	if os.path.isfile(p+'/YoloServer.ice'):
+	if os.path.isfile(p+'/CameraRGBDSimpleYoloPub.ice'):
 		preStr = "-I/opt/robocomp/interfaces/ -I"+ROBOCOMP+"/interfaces/ " + additionalPathStr + " --all "+p+'/'
-		wholeStr = preStr+"YoloServer.ice"
+		wholeStr = preStr+"CameraRGBDSimpleYoloPub.ice"
 		Ice.loadSlice(wholeStr)
-		ice_YoloServer = True
+		ice_CameraRGBDSimpleYoloPub = True
 		break
-if not ice_YoloServer:
-	print('Couln\'t load YoloServer')
+if not ice_CameraRGBDSimpleYoloPub:
+	print('Couln\'t load CameraRGBDSimpleYoloPub')
 	sys.exit(-1)
-from RoboCompYoloServer import *
-ice_CameraRGBDSimple = False
-for p in icePaths:
-	if os.path.isfile(p+'/CameraRGBDSimple.ice'):
-		preStr = "-I/opt/robocomp/interfaces/ -I"+ROBOCOMP+"/interfaces/ " + additionalPathStr + " --all "+p+'/'
-		wholeStr = preStr+"CameraRGBDSimple.ice"
-		Ice.loadSlice(wholeStr)
-		ice_CameraRGBDSimple = True
-		break
-if not ice_CameraRGBDSimple:
-	print('Couln\'t load CameraRGBDSimple')
-	sys.exit(-1)
-from RoboCompCameraRGBDSimple import *
+from RoboCompCameraRGBDSimpleYoloPub import *
 ice_AprilTagsServer = False
 for p in icePaths:
 	if os.path.isfile(p+'/AprilTagsServer.ice'):
@@ -104,6 +80,30 @@ if not ice_AprilTagsServer:
 	print('Couln\'t load AprilTagsServer')
 	sys.exit(-1)
 from RoboCompAprilTagsServer import *
+ice_CameraRGBDSimple = False
+for p in icePaths:
+	if os.path.isfile(p+'/CameraRGBDSimple.ice'):
+		preStr = "-I/opt/robocomp/interfaces/ -I"+ROBOCOMP+"/interfaces/ " + additionalPathStr + " --all "+p+'/'
+		wholeStr = preStr+"CameraRGBDSimple.ice"
+		Ice.loadSlice(wholeStr)
+		ice_CameraRGBDSimple = True
+		break
+if not ice_CameraRGBDSimple:
+	print('Couln\'t load CameraRGBDSimple')
+	sys.exit(-1)
+from RoboCompCameraRGBDSimple import *
+ice_YoloServer = False
+for p in icePaths:
+	if os.path.isfile(p+'/YoloServer.ice'):
+		preStr = "-I/opt/robocomp/interfaces/ -I"+ROBOCOMP+"/interfaces/ " + additionalPathStr + " --all "+p+'/'
+		wholeStr = preStr+"YoloServer.ice"
+		Ice.loadSlice(wholeStr)
+		ice_YoloServer = True
+		break
+if not ice_YoloServer:
+	print('Couln\'t load YoloServer')
+	sys.exit(-1)
+from RoboCompYoloServer import *
 
 
 from camerargbdsimpleyolopubI import *
@@ -115,6 +115,7 @@ class GenericWorker(QtCore.QObject):
 	kill = QtCore.Signal()
 #Signals for State Machine
 	t_inicializar_to_detectarObjetos = QtCore.Signal()
+	t_inicializar_to_moverBrazo = QtCore.Signal()
 	t_detectarObjetos_to_detectarObjetos = QtCore.Signal()
 	t_detectarObjetos_to_moverBrazo = QtCore.Signal()
 	t_detectarObjetos_to_cogerObjeto = QtCore.Signal()
@@ -122,10 +123,13 @@ class GenericWorker(QtCore.QObject):
 	t_moverBrazo_to_moverBrazo = QtCore.Signal()
 	t_moverBrazo_to_cogerObjeto = QtCore.Signal()
 	t_moverBrazo_to_dejarObjeto = QtCore.Signal()
+	t_cogerObjeto_to_cogerObjeto = QtCore.Signal()
 	t_cogerObjeto_to_moverBrazo = QtCore.Signal()
 	t_cogerObjeto_to_dejarObjeto = QtCore.Signal()
+	t_dejarObjeto_to_dejarObjeto = QtCore.Signal()
 	t_dejarObjeto_to_moverBrazo = QtCore.Signal()
 	t_dejarObjeto_to_finalizar = QtCore.Signal()
+	t_dejarObjeto_to_inicializar = QtCore.Signal()
 
 #-------------------------
 
@@ -137,7 +141,7 @@ class GenericWorker(QtCore.QObject):
 
 		
 		self.mutex = QtCore.QMutex(QtCore.QMutex.Recursive)
-		self.Period = 	1000
+		self.Period = 30
 		self.timer = QtCore.QTimer(self)
 
 #State Machine
@@ -154,6 +158,7 @@ class GenericWorker(QtCore.QObject):
 #------------------
 #Initialization State machine
 		self.inicializar_state.addTransition(self.t_inicializar_to_detectarObjetos, self.detectarObjetos_state)
+		self.inicializar_state.addTransition(self.t_inicializar_to_moverBrazo, self.moverBrazo_state)
 		self.detectarObjetos_state.addTransition(self.t_detectarObjetos_to_detectarObjetos, self.detectarObjetos_state)
 		self.detectarObjetos_state.addTransition(self.t_detectarObjetos_to_moverBrazo, self.moverBrazo_state)
 		self.detectarObjetos_state.addTransition(self.t_detectarObjetos_to_cogerObjeto, self.cogerObjeto_state)
@@ -161,10 +166,13 @@ class GenericWorker(QtCore.QObject):
 		self.moverBrazo_state.addTransition(self.t_moverBrazo_to_moverBrazo, self.moverBrazo_state)
 		self.moverBrazo_state.addTransition(self.t_moverBrazo_to_cogerObjeto, self.cogerObjeto_state)
 		self.moverBrazo_state.addTransition(self.t_moverBrazo_to_dejarObjeto, self.dejarObjeto_state)
+		self.cogerObjeto_state.addTransition(self.t_cogerObjeto_to_cogerObjeto, self.cogerObjeto_state)
 		self.cogerObjeto_state.addTransition(self.t_cogerObjeto_to_moverBrazo, self.moverBrazo_state)
 		self.cogerObjeto_state.addTransition(self.t_cogerObjeto_to_dejarObjeto, self.dejarObjeto_state)
+		self.dejarObjeto_state.addTransition(self.t_dejarObjeto_to_dejarObjeto, self.dejarObjeto_state)
 		self.dejarObjeto_state.addTransition(self.t_dejarObjeto_to_moverBrazo, self.moverBrazo_state)
 		self.dejarObjeto_state.addTransition(self.t_dejarObjeto_to_finalizar, self.finalizar_state)
+		self.dejarObjeto_state.addTransition(self.t_dejarObjeto_to_inicializar, self.inicializar_state)
 
 
 		self.detectarObjetos_state.entered.connect(self.sm_detectarObjetos)

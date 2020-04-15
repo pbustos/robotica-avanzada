@@ -37,6 +37,9 @@ class SpecificWorker(GenericWorker):
 		# Connect to VREP IK
 		self.client = b0RemoteApi.RemoteApiClient('b0RemoteApi_pythonClient','b0RemoteApiAddOn')
 		self.target = self.client.simxGetObjectHandle('target', self.client.simxServiceCall())[1]
+		self.pivote = self.client.simxGetObjectHandle('PivoteApproach', self.client.simxServiceCall())[1]
+		self.biela = self.client.simxGetObjectHandle('BielaApproach', self.client.simxServiceCall())[1]
+		self.home = self.client.simxGetObjectHandle('InitApproach', self.client.simxServiceCall())[1]
 		self.base = self.client.simxGetObjectHandle('gen3', self.client.simxServiceCall())[1]
 		self.camera_arm = self.client.simxGetObjectHandle('camera_in_hand', self.client.simxServiceCall())[1]
 
@@ -70,67 +73,6 @@ class SpecificWorker(GenericWorker):
 				cv2.rectangle(orig, (x - 5, y - 5), (x + 5, y + 5), (0, 128, 255), -1)
 			# show the output image
 		return orig, circles
-			
-	########################################################################
-
-	@QtCore.Slot()	
-	def detectarObjetos(self):	
-		#posicion de reconocimiento
-		#self.client.simxSetObjectPose(self.target, self.base, [0.01, -0.35, 0.53, 0.0, 0.0, 0.0, 0.0], self.client.simxServiceCall())		
-		
-		# if self.JOYSTICK_EVENT:
-		# 	#self.client.simxSetObjectPosition('target', self.client.simxServiceCall())[1]
-		# 	self.JOYSTICK_EVENT = False
-
-		# capture image
-		res, resolution, imageVREP = self.client.simxGetVisionSensorImage(self.camera_arm, False, self.client.simxServiceCall())
-		img = np.fromstring(imageVREP, np.uint8).reshape( resolution[1],resolution[0], 3)
-		img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
-		img = cv2.flip(img, 0)
-		img, self.circles = self.detectCircles(img)
-		cv2.imshow("Gen3", img)
-		cv2.waitKey(1)
-
-		#change state?
-		if self.circles is not None:
-			return True
-		else:
-			return False
-			
-	def moverBrazo(self):
-		cx, cy, cr = self.circles[0]
-		target = self.client.simxGetObjectPose(self.target, self.base, self.client.simxServiceCall())[1]
-		objActual = np.array([cx, cy])
-		diffPos = np.array([320, 240.]) - objActual
-		# 	height = l.tz/1000.
-		print(diffPos)
-		try:
-			target[0] = target[0] + ( diffPos[0] * 0.0005 )
-			target[1] = target[1] - ( diffPos[1] * 0.0005 )
-			target[2] = target[2] - ( target[2] * 0.005 )
-			self.client.simxSetObjectPose(self.target, self.base, target, self.client.simxServiceCall())
-		except:
-			print("Something went wrong")
-
-		#change state ?
-		if target[2] < 0.1: #esta en posicion de cogerse
-			return True
-		else:
-			return False
-
-
-	def cogerObjeto(self):
-		#cerramos las pinzas
-		self.client.simxCallScriptFunction("closeGripper@gen3", 1,0,self.client.simxServiceCall())
-		#levantamos un poco el brazo
-		self.client.simxSetObjectPose(self.target, self.base, self.listCoordenadasObjeto, self.client.simxServiceCall())
-		pass
-
-	def dejarObjeto(self):
-		#movemos el brazo a esa posicion objetivo
-		self.client.simxSetObjectPose(self.target, self.base, self.listCoordenadasObjeto, self.client.simxServiceCall())
-		#abrimos pinzas
-		self.client.simxCallScriptFunction("openGripper@gen3", 1,0,self.client.simxServiceCall())
 
 	def getAprilTags(self, image, resolution):
 		try:
@@ -144,6 +86,65 @@ class SpecificWorker(GenericWorker):
 	
 		except Ice.Exception as ex:
 			print(ex)
+			
+	########################################################################
+	def iniciarlizarBrazo(self):
+		while True:
+			self.client.simxCallScriptFunction("moveToObjectHandle@gen3", 1,self.home,self.client.simxServiceCall())
+			PosActual = self.client.simxGetObjectPose(self.target, self.base, self.client.simxServiceCall())[1]
+			PosObj = self.client.simxGetObjectPose(self.home, self.base, self.client.simxServiceCall())[1]
+			result = np.abs(np.array(PosActual) - np.array(PosObj))
+			if(result[0] < 0.05 and result[1] < 0.05 and result[2] < 0.05 ):
+				break
+		time.sleep(20)
+	
+	def detectarObjetos(self):
+		# capture image
+		res, resolution, imageVREP = self.client.simxGetVisionSensorImage(self.camera_arm, False, self.client.simxServiceCall())
+		img = np.fromstring(imageVREP, np.uint8).reshape( resolution[1],resolution[0], 3)
+		img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+		img = cv2.flip(img, 0)
+		img, self.circles = self.detectCircles(img)
+		cv2.imshow("Gen3", img)
+		cv2.waitKey(1)
+
+		#hay alguna biela
+		if self.circles is not None:
+			return True
+		else:
+			return False
+			
+	def moverBrazo(self):
+		while True:
+			self.client.simxCallScriptFunction("moveToObjectHandle@gen3", 1,self.biela,self.client.simxServiceCall())
+			PosActual = self.client.simxGetObjectPose(self.target, self.base, self.client.simxServiceCall())[1]
+			PosObj = self.client.simxGetObjectPose(self.biela, self.base, self.client.simxServiceCall())[1]
+			result = np.abs(np.array(PosActual) - np.array(PosObj))
+			if(result[0] < 0.05 and result[1] < 0.05 and result[2] < 0.05 ):
+				break
+		time.sleep(20)
+		return True
+
+
+	def cogerObjeto(self):
+		#cerramos las pinzas
+		self.client.simxCallScriptFunction("closeGripper@gen3", 1,0,self.client.simxServiceCall())
+		time.sleep(20)
+		return True
+
+	def dejarObjeto(self):
+		while True:
+			self.client.simxCallScriptFunction("moveToObjectHandle@gen3", 1,self.pivote,self.client.simxServiceCall())
+			PosActual = self.client.simxGetObjectPose(self.target, self.base, self.client.simxServiceCall())[1]
+			PosObj = self.client.simxGetObjectPose(self.pivote, self.base, self.client.simxServiceCall())[1]
+			result = np.abs(np.array(PosActual) - np.array(PosObj))
+			if(result[0] < 0.05 and result[1] < 0.05 and result[2] < 0.05 ):
+				break
+		time.sleep(20)
+		#abrimos pinzas
+		self.client.simxCallScriptFunction("openGripper@gen3", 1,0,self.client.simxServiceCall())
+		time.sleep(20)
+		return True
 
 # =============== Slots methods for State Machine ===================
 # ===================================================================
@@ -153,26 +154,8 @@ class SpecificWorker(GenericWorker):
 	@QtCore.Slot()
 	def sm_inicializar(self):
 		print("Entered state inicializar")
-		#self.client.simxSetObjectPose(self.target, self.base, [0.01, -0.35, 0.53, 0.0, 0.0, 180.0, 0.0], self.client.simxServiceCall())		
+		self.iniciarlizarBrazo()
 		self.t_inicializar_to_detectarObjetos.emit()
-		pass
-
-	#
-	# sm_cogerObjeto
-	#
-	@QtCore.Slot()
-	def sm_cogerObjeto(self):
-		print("Entered state cogerObjeto")
-		self.cogerObjeto()
-		pass
-
-	#
-	# sm_dejarObjeto
-	#
-	@QtCore.Slot()
-	def sm_dejarObjeto(self):
-		print("Entered state dejarObjeto")
-		self.dejarObjeto()
 		pass
 
 	#
@@ -185,7 +168,7 @@ class SpecificWorker(GenericWorker):
 			self.t_detectarObjetos_to_detectarObjetos.emit()
 		else:
 			self.t_detectarObjetos_to_moverBrazo.emit()
-		
+	
 	# sm_moverBrazo
 	#
 	@QtCore.Slot()
@@ -195,6 +178,27 @@ class SpecificWorker(GenericWorker):
 			self.t_moverBrazo_to_detectarObjetos.emit()
 		else:
 			self.t_moverBrazo_to_cogerObjeto.emit()
+
+	#
+	# sm_cogerObjeto
+	#
+	@QtCore.Slot()
+	def sm_cogerObjeto(self):
+		print("Entered state cogerObjeto")
+		if self.cogerObjeto():
+			self.t_cogerObjeto_to_dejarObjeto.emit()
+
+		pass
+
+	#
+	# sm_dejarObjeto
+	#
+	@QtCore.Slot()
+	def sm_dejarObjeto(self):
+		print("Entered state dejarObjeto")
+		if self.dejarObjeto():
+			self.t_dejarObjeto_to_inicializar.emit()
+		pass
 
 	#
 	# sm_finalizar
