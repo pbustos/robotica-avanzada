@@ -3,15 +3,16 @@
    ANY CHANGE TO THE DEFAULT STATES OR TRANSITIONS */
 
 Maq1FirtsMovement{
-    states detectarObjetos, moverBrazo, cogerObjeto, dejarObjeto;
+    states detectarObjetos, moverBrazoToObj, cogerObjeto, trasladarObjToPosFinal, soltarObjeto;
     initial_state inicializar;
     end_state finalizar;
     transitions{
-        inicializar => detectarObjetos, moverBrazo;
-	detectarObjetos => detectarObjetos, moverBrazo, cogerObjeto;
-	moverBrazo => detectarObjetos, moverBrazo, cogerObjeto, dejarObjeto;
-	cogerObjeto => cogerObjeto, moverBrazo, dejarObjeto;
-	dejarObjeto=> dejarObjeto, moverBrazo, finalizar, inicializar;
+        inicializar => detectarObjetos, moverBrazoToObj;
+	detectarObjetos => detectarObjetos, moverBrazoToObj, cogerObjeto;
+	moverBrazoToObj => detectarObjetos, moverBrazoToObj, cogerObjeto, soltarObjeto;
+	cogerObjeto => cogerObjeto, moverBrazoToObj, soltarObjeto, trasladarObjToPosFinal;
+    trasladarObjToPosFinal => trasladarObjToPosFinal, cogerObjeto, soltarObjeto;
+	soltarObjeto=> soltarObjeto, moverBrazoToObj, finalizar, inicializar;
     };
 };
 

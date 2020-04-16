@@ -56,30 +56,6 @@ if not ice_JoystickAdapter:
 	print('Couln\'t load JoystickAdapter')
 	sys.exit(-1)
 from RoboCompJoystickAdapter import *
-ice_CameraRGBDSimpleYoloPub = False
-for p in icePaths:
-	if os.path.isfile(p+'/CameraRGBDSimpleYoloPub.ice'):
-		preStr = "-I/opt/robocomp/interfaces/ -I"+ROBOCOMP+"/interfaces/ " + additionalPathStr + " --all "+p+'/'
-		wholeStr = preStr+"CameraRGBDSimpleYoloPub.ice"
-		Ice.loadSlice(wholeStr)
-		ice_CameraRGBDSimpleYoloPub = True
-		break
-if not ice_CameraRGBDSimpleYoloPub:
-	print('Couln\'t load CameraRGBDSimpleYoloPub')
-	sys.exit(-1)
-from RoboCompCameraRGBDSimpleYoloPub import *
-ice_AprilTagsServer = False
-for p in icePaths:
-	if os.path.isfile(p+'/AprilTagsServer.ice'):
-		preStr = "-I/opt/robocomp/interfaces/ -I"+ROBOCOMP+"/interfaces/ " + additionalPathStr + " --all "+p+'/'
-		wholeStr = preStr+"AprilTagsServer.ice"
-		Ice.loadSlice(wholeStr)
-		ice_AprilTagsServer = True
-		break
-if not ice_AprilTagsServer:
-	print('Couln\'t load AprilTagsServer')
-	sys.exit(-1)
-from RoboCompAprilTagsServer import *
 ice_CameraRGBDSimple = False
 for p in icePaths:
 	if os.path.isfile(p+'/CameraRGBDSimple.ice'):
@@ -92,6 +68,30 @@ if not ice_CameraRGBDSimple:
 	print('Couln\'t load CameraRGBDSimple')
 	sys.exit(-1)
 from RoboCompCameraRGBDSimple import *
+ice_AprilTagsServer = False
+for p in icePaths:
+	if os.path.isfile(p+'/AprilTagsServer.ice'):
+		preStr = "-I/opt/robocomp/interfaces/ -I"+ROBOCOMP+"/interfaces/ " + additionalPathStr + " --all "+p+'/'
+		wholeStr = preStr+"AprilTagsServer.ice"
+		Ice.loadSlice(wholeStr)
+		ice_AprilTagsServer = True
+		break
+if not ice_AprilTagsServer:
+	print('Couln\'t load AprilTagsServer')
+	sys.exit(-1)
+from RoboCompAprilTagsServer import *
+ice_CameraRGBDSimpleYoloPub = False
+for p in icePaths:
+	if os.path.isfile(p+'/CameraRGBDSimpleYoloPub.ice'):
+		preStr = "-I/opt/robocomp/interfaces/ -I"+ROBOCOMP+"/interfaces/ " + additionalPathStr + " --all "+p+'/'
+		wholeStr = preStr+"CameraRGBDSimpleYoloPub.ice"
+		Ice.loadSlice(wholeStr)
+		ice_CameraRGBDSimpleYoloPub = True
+		break
+if not ice_CameraRGBDSimpleYoloPub:
+	print('Couln\'t load CameraRGBDSimpleYoloPub')
+	sys.exit(-1)
+from RoboCompCameraRGBDSimpleYoloPub import *
 ice_YoloServer = False
 for p in icePaths:
 	if os.path.isfile(p+'/YoloServer.ice'):
@@ -115,21 +115,25 @@ class GenericWorker(QtCore.QObject):
 	kill = QtCore.Signal()
 #Signals for State Machine
 	t_inicializar_to_detectarObjetos = QtCore.Signal()
-	t_inicializar_to_moverBrazo = QtCore.Signal()
+	t_inicializar_to_moverBrazoToObj = QtCore.Signal()
 	t_detectarObjetos_to_detectarObjetos = QtCore.Signal()
-	t_detectarObjetos_to_moverBrazo = QtCore.Signal()
+	t_detectarObjetos_to_moverBrazoToObj = QtCore.Signal()
 	t_detectarObjetos_to_cogerObjeto = QtCore.Signal()
-	t_moverBrazo_to_detectarObjetos = QtCore.Signal()
-	t_moverBrazo_to_moverBrazo = QtCore.Signal()
-	t_moverBrazo_to_cogerObjeto = QtCore.Signal()
-	t_moverBrazo_to_dejarObjeto = QtCore.Signal()
+	t_moverBrazoToObj_to_detectarObjetos = QtCore.Signal()
+	t_moverBrazoToObj_to_moverBrazoToObj = QtCore.Signal()
+	t_moverBrazoToObj_to_cogerObjeto = QtCore.Signal()
+	t_moverBrazoToObj_to_soltarObjeto = QtCore.Signal()
 	t_cogerObjeto_to_cogerObjeto = QtCore.Signal()
-	t_cogerObjeto_to_moverBrazo = QtCore.Signal()
-	t_cogerObjeto_to_dejarObjeto = QtCore.Signal()
-	t_dejarObjeto_to_dejarObjeto = QtCore.Signal()
-	t_dejarObjeto_to_moverBrazo = QtCore.Signal()
-	t_dejarObjeto_to_finalizar = QtCore.Signal()
-	t_dejarObjeto_to_inicializar = QtCore.Signal()
+	t_cogerObjeto_to_moverBrazoToObj = QtCore.Signal()
+	t_cogerObjeto_to_soltarObjeto = QtCore.Signal()
+	t_cogerObjeto_to_trasladarObjToPosFinal = QtCore.Signal()
+	t_trasladarObjToPosFinal_to_trasladarObjToPosFinal = QtCore.Signal()
+	t_trasladarObjToPosFinal_to_cogerObjeto = QtCore.Signal()
+	t_trasladarObjToPosFinal_to_soltarObjeto = QtCore.Signal()
+	t_soltarObjeto_to_soltarObjeto = QtCore.Signal()
+	t_soltarObjeto_to_moverBrazoToObj = QtCore.Signal()
+	t_soltarObjeto_to_finalizar = QtCore.Signal()
+	t_soltarObjeto_to_inicializar = QtCore.Signal()
 
 #-------------------------
 
@@ -147,9 +151,10 @@ class GenericWorker(QtCore.QObject):
 #State Machine
 		self.Maq1FirtsMovement= QtCore.QStateMachine()
 		self.detectarObjetos_state = QtCore.QState(self.Maq1FirtsMovement)
-		self.moverBrazo_state = QtCore.QState(self.Maq1FirtsMovement)
+		self.moverBrazoToObj_state = QtCore.QState(self.Maq1FirtsMovement)
 		self.cogerObjeto_state = QtCore.QState(self.Maq1FirtsMovement)
-		self.dejarObjeto_state = QtCore.QState(self.Maq1FirtsMovement)
+		self.trasladarObjToPosFinal_state = QtCore.QState(self.Maq1FirtsMovement)
+		self.soltarObjeto_state = QtCore.QState(self.Maq1FirtsMovement)
 		self.inicializar_state = QtCore.QState(self.Maq1FirtsMovement)
 
 		self.finalizar_state = QtCore.QFinalState(self.Maq1FirtsMovement)
@@ -158,27 +163,32 @@ class GenericWorker(QtCore.QObject):
 #------------------
 #Initialization State machine
 		self.inicializar_state.addTransition(self.t_inicializar_to_detectarObjetos, self.detectarObjetos_state)
-		self.inicializar_state.addTransition(self.t_inicializar_to_moverBrazo, self.moverBrazo_state)
+		self.inicializar_state.addTransition(self.t_inicializar_to_moverBrazoToObj, self.moverBrazoToObj_state)
 		self.detectarObjetos_state.addTransition(self.t_detectarObjetos_to_detectarObjetos, self.detectarObjetos_state)
-		self.detectarObjetos_state.addTransition(self.t_detectarObjetos_to_moverBrazo, self.moverBrazo_state)
+		self.detectarObjetos_state.addTransition(self.t_detectarObjetos_to_moverBrazoToObj, self.moverBrazoToObj_state)
 		self.detectarObjetos_state.addTransition(self.t_detectarObjetos_to_cogerObjeto, self.cogerObjeto_state)
-		self.moverBrazo_state.addTransition(self.t_moverBrazo_to_detectarObjetos, self.detectarObjetos_state)
-		self.moverBrazo_state.addTransition(self.t_moverBrazo_to_moverBrazo, self.moverBrazo_state)
-		self.moverBrazo_state.addTransition(self.t_moverBrazo_to_cogerObjeto, self.cogerObjeto_state)
-		self.moverBrazo_state.addTransition(self.t_moverBrazo_to_dejarObjeto, self.dejarObjeto_state)
+		self.moverBrazoToObj_state.addTransition(self.t_moverBrazoToObj_to_detectarObjetos, self.detectarObjetos_state)
+		self.moverBrazoToObj_state.addTransition(self.t_moverBrazoToObj_to_moverBrazoToObj, self.moverBrazoToObj_state)
+		self.moverBrazoToObj_state.addTransition(self.t_moverBrazoToObj_to_cogerObjeto, self.cogerObjeto_state)
+		self.moverBrazoToObj_state.addTransition(self.t_moverBrazoToObj_to_soltarObjeto, self.soltarObjeto_state)
 		self.cogerObjeto_state.addTransition(self.t_cogerObjeto_to_cogerObjeto, self.cogerObjeto_state)
-		self.cogerObjeto_state.addTransition(self.t_cogerObjeto_to_moverBrazo, self.moverBrazo_state)
-		self.cogerObjeto_state.addTransition(self.t_cogerObjeto_to_dejarObjeto, self.dejarObjeto_state)
-		self.dejarObjeto_state.addTransition(self.t_dejarObjeto_to_dejarObjeto, self.dejarObjeto_state)
-		self.dejarObjeto_state.addTransition(self.t_dejarObjeto_to_moverBrazo, self.moverBrazo_state)
-		self.dejarObjeto_state.addTransition(self.t_dejarObjeto_to_finalizar, self.finalizar_state)
-		self.dejarObjeto_state.addTransition(self.t_dejarObjeto_to_inicializar, self.inicializar_state)
+		self.cogerObjeto_state.addTransition(self.t_cogerObjeto_to_moverBrazoToObj, self.moverBrazoToObj_state)
+		self.cogerObjeto_state.addTransition(self.t_cogerObjeto_to_soltarObjeto, self.soltarObjeto_state)
+		self.cogerObjeto_state.addTransition(self.t_cogerObjeto_to_trasladarObjToPosFinal, self.trasladarObjToPosFinal_state)
+		self.trasladarObjToPosFinal_state.addTransition(self.t_trasladarObjToPosFinal_to_trasladarObjToPosFinal, self.trasladarObjToPosFinal_state)
+		self.trasladarObjToPosFinal_state.addTransition(self.t_trasladarObjToPosFinal_to_cogerObjeto, self.cogerObjeto_state)
+		self.trasladarObjToPosFinal_state.addTransition(self.t_trasladarObjToPosFinal_to_soltarObjeto, self.soltarObjeto_state)
+		self.soltarObjeto_state.addTransition(self.t_soltarObjeto_to_soltarObjeto, self.soltarObjeto_state)
+		self.soltarObjeto_state.addTransition(self.t_soltarObjeto_to_moverBrazoToObj, self.moverBrazoToObj_state)
+		self.soltarObjeto_state.addTransition(self.t_soltarObjeto_to_finalizar, self.finalizar_state)
+		self.soltarObjeto_state.addTransition(self.t_soltarObjeto_to_inicializar, self.inicializar_state)
 
 
 		self.detectarObjetos_state.entered.connect(self.sm_detectarObjetos)
-		self.moverBrazo_state.entered.connect(self.sm_moverBrazo)
+		self.moverBrazoToObj_state.entered.connect(self.sm_moverBrazoToObj)
 		self.cogerObjeto_state.entered.connect(self.sm_cogerObjeto)
-		self.dejarObjeto_state.entered.connect(self.sm_dejarObjeto)
+		self.trasladarObjToPosFinal_state.entered.connect(self.sm_trasladarObjToPosFinal)
+		self.soltarObjeto_state.entered.connect(self.sm_soltarObjeto)
 		self.inicializar_state.entered.connect(self.sm_inicializar)
 		self.finalizar_state.entered.connect(self.sm_finalizar)
 
@@ -193,8 +203,8 @@ class GenericWorker(QtCore.QObject):
 		sys.exit(-1)
 
 	@QtCore.Slot()
-	def sm_moverBrazo(self):
-		print("Error: lack sm_moverBrazo in Specificworker")
+	def sm_moverBrazoToObj(self):
+		print("Error: lack sm_moverBrazoToObj in Specificworker")
 		sys.exit(-1)
 
 	@QtCore.Slot()
@@ -203,8 +213,13 @@ class GenericWorker(QtCore.QObject):
 		sys.exit(-1)
 
 	@QtCore.Slot()
-	def sm_dejarObjeto(self):
-		print("Error: lack sm_dejarObjeto in Specificworker")
+	def sm_trasladarObjToPosFinal(self):
+		print("Error: lack sm_trasladarObjToPosFinal in Specificworker")
+		sys.exit(-1)
+
+	@QtCore.Slot()
+	def sm_soltarObjeto(self):
+		print("Error: lack sm_soltarObjeto in Specificworker")
 		sys.exit(-1)
 
 	@QtCore.Slot()

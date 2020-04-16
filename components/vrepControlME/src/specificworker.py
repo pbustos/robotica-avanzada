@@ -42,9 +42,10 @@ class SpecificWorker(GenericWorker):
 		self.home = self.client.simxGetObjectHandle('InitApproach', self.client.simxServiceCall())[1]
 		self.base = self.client.simxGetObjectHandle('gen3', self.client.simxServiceCall())[1]
 		self.camera_arm = self.client.simxGetObjectHandle('camera_in_hand', self.client.simxServiceCall())[1]
+		self.gripper = self.client.simxGetObjectHandle('RG2_openCloseJoint', self.client.simxServiceCall())[1]
 
 		self.Maq1FirtsMovement.start()
-		self.destroyed.connect(self.t_dejarObjeto_to_finalizar)
+		self.destroyed.connect(self.t_soltarObjeto_to_finalizar)
 
 		self.JOYSTICK_EVENT = False
 		print("Leaving Init")
@@ -55,6 +56,8 @@ class SpecificWorker(GenericWorker):
 	def setParams(self, params):
 		return True
 
+	# =============== Metodos Auxiliares ================================
+	# ===================================================================
 	def detectCircles(self, orig):
 		gray = cv2.cvtColor(orig, cv2.COLOR_BGR2GRAY)
 		# detect circles in the image
@@ -86,17 +89,62 @@ class SpecificWorker(GenericWorker):
 	
 		except Ice.Exception as ex:
 			print(ex)
-			
-	########################################################################
-	def iniciarlizarBrazo(self):
+
+	def gripperMovement(self, close=False):
+		#abrimos pinzas para soltar el objeto
+		percentajeOpen = posInicial = self.client.simxGetJointPosition(self.gripper, self.client.simxServiceCall())[1]
+		callFunction = True
 		while True:
-			self.client.simxCallScriptFunction("moveToObjectHandle@gen3", 1,self.home,self.client.simxServiceCall())
-			PosActual = self.client.simxGetObjectPose(self.target, self.base, self.client.simxServiceCall())[1]
-			PosObj = self.client.simxGetObjectPose(self.home, self.base, self.client.simxServiceCall())[1]
-			result = np.abs(np.array(PosActual) - np.array(PosObj))
-			if(result[0] < 0.05 and result[1] < 0.05 and result[2] < 0.05 ):
+			#se llama a la funcion
+			if callFunction:
+				if close:
+					result = self.client.simxCallScriptFunction("closeGripper@gen3", 1,0,self.client.simxServiceCall())
+				else:
+					result = self.client.simxCallScriptFunction("openGripper@gen3", 1,0,self.client.simxServiceCall())
+				
+				#se determina si se llama otra vez a la funcion o no (la pinza se ha movido algo)
+				if (abs(result[1] - posInicial) > 0.005):
+					callFunction = False
+			
+			#la pinza se ha terminado de cerrar o abrir?
+			if(abs(percentajeOpen - self.client.simxGetJointPosition(self.gripper, self.client.simxServiceCall())[1]) < 0.0001):
 				break
-		time.sleep(20)
+			
+			#actualizamos el porcentaje de apertura
+			percentajeOpen = self.client.simxGetJointPosition(self.gripper, self.client.simxServiceCall())[1]
+
+	def moverBrazo(self, DummyDestino):
+		#ponemos el brazo en la posicion de inicio
+		callFunction = True
+		PosIncio = np.array(self.client.simxGetObjectPose(self.target, self.base, self.client.simxServiceCall())[1])
+		while True:
+			#es necesario volver a llamar a la funcion? (posibles perdidas en la llamada)
+			if callFunction:
+				self.client.simxCallScriptFunction("moveToObjectHandle@gen3", 1,DummyDestino,self.client.simxServiceCall())
+
+			#leemos los valores de los dummys
+			PosActual = self.client.simxGetObjectPose(self.target, self.base, self.client.simxServiceCall())[1]
+			PosObj = self.client.simxGetObjectPose(DummyDestino, self.base, self.client.simxServiceCall())[1]
+			
+			#comprobamos que se ha llamado a la funcion correctamente (es decir el brazo se mueve)
+			resultMovimiento = np.abs(np.array(PosActual) - np.array(PosIncio))
+			if(callFunction and resultMovimiento[0] > 0.001 or resultMovimiento[1] > 0.001 or resultMovimiento[2] > 0.001):
+				callFunction = False
+
+			#comprobamos que ha llegado al destino
+			resultDestino = np.abs(np.array(PosActual) - np.array(PosObj))
+			if(resultDestino[0] < 0.0001 and resultDestino[1] < 0.0001 and resultDestino[2] < 0.0001 and 
+				resultDestino[3] < 0.0001 and resultDestino[4] < 0.0001 and resultDestino[5] < 0.0001):
+				break
+
+
+			
+	# =============== Metodos Estados ===================================
+	# ===================================================================
+	def iniciarlizarBrazo(self):
+		self.gripperMovement(close=False)
+		self.moverBrazo(self.home)
+		return True
 	
 	def detectarObjetos(self):
 		# capture image
@@ -108,42 +156,27 @@ class SpecificWorker(GenericWorker):
 		cv2.imshow("Gen3", img)
 		cv2.waitKey(1)
 
-		#hay alguna biela
+		#hay alguna biela?
 		if self.circles is not None:
 			return True
 		else:
 			return False
 			
-	def moverBrazo(self):
-		while True:
-			self.client.simxCallScriptFunction("moveToObjectHandle@gen3", 1,self.biela,self.client.simxServiceCall())
-			PosActual = self.client.simxGetObjectPose(self.target, self.base, self.client.simxServiceCall())[1]
-			PosObj = self.client.simxGetObjectPose(self.biela, self.base, self.client.simxServiceCall())[1]
-			result = np.abs(np.array(PosActual) - np.array(PosObj))
-			if(result[0] < 0.05 and result[1] < 0.05 and result[2] < 0.05 ):
-				break
-		time.sleep(20)
+	def moverBrazoToObj(self):
+		self.moverBrazo(self.biela)
 		return True
 
 
 	def cogerObjeto(self):
-		#cerramos las pinzas
-		self.client.simxCallScriptFunction("closeGripper@gen3", 1,0,self.client.simxServiceCall())
-		time.sleep(20)
+		self.gripperMovement(close=True)
 		return True
 
-	def dejarObjeto(self):
-		while True:
-			self.client.simxCallScriptFunction("moveToObjectHandle@gen3", 1,self.pivote,self.client.simxServiceCall())
-			PosActual = self.client.simxGetObjectPose(self.target, self.base, self.client.simxServiceCall())[1]
-			PosObj = self.client.simxGetObjectPose(self.pivote, self.base, self.client.simxServiceCall())[1]
-			result = np.abs(np.array(PosActual) - np.array(PosObj))
-			if(result[0] < 0.05 and result[1] < 0.05 and result[2] < 0.05 ):
-				break
-		time.sleep(20)
-		#abrimos pinzas
-		self.client.simxCallScriptFunction("openGripper@gen3", 1,0,self.client.simxServiceCall())
-		time.sleep(20)
+	def trasladarObjToPosFinal(self):
+		self.moverBrazo(self.pivote)
+		return True
+
+	def soltarObjeto(self):
+		self.gripperMovement(close=False)
 		return True
 
 # =============== Slots methods for State Machine ===================
@@ -154,8 +187,8 @@ class SpecificWorker(GenericWorker):
 	@QtCore.Slot()
 	def sm_inicializar(self):
 		print("Entered state inicializar")
-		self.iniciarlizarBrazo()
-		self.t_inicializar_to_detectarObjetos.emit()
+		if self.iniciarlizarBrazo():
+			self.t_inicializar_to_detectarObjetos.emit()
 		pass
 
 	#
@@ -167,17 +200,17 @@ class SpecificWorker(GenericWorker):
 		if not self.detectarObjetos():
 			self.t_detectarObjetos_to_detectarObjetos.emit()
 		else:
-			self.t_detectarObjetos_to_moverBrazo.emit()
+			self.t_detectarObjetos_to_moverBrazoToObj.emit()
 	
 	# sm_moverBrazo
 	#
 	@QtCore.Slot()
-	def sm_moverBrazo(self):
-		print("Entered state moverBrazo")
-		if not self.moverBrazo():
-			self.t_moverBrazo_to_detectarObjetos.emit()
+	def sm_moverBrazoToObj(self):
+		print("Entered state moverBrazoToObj")
+		if not self.moverBrazoToObj():
+			self.t_moverBrazoToObj_to_detectarObjetos.emit()
 		else:
-			self.t_moverBrazo_to_cogerObjeto.emit()
+			self.t_moverBrazoToObj_to_cogerObjeto.emit()
 
 	#
 	# sm_cogerObjeto
@@ -186,18 +219,28 @@ class SpecificWorker(GenericWorker):
 	def sm_cogerObjeto(self):
 		print("Entered state cogerObjeto")
 		if self.cogerObjeto():
-			self.t_cogerObjeto_to_dejarObjeto.emit()
+			self.t_cogerObjeto_to_trasladarObjToPosFinal.emit()
 
+		pass
+
+	#
+	# sm_trasladarObjToPosFinal
+	#
+	@QtCore.Slot()
+	def sm_trasladarObjToPosFinal(self):
+		print("Entered state trasladarObjToPosFinal")
+		if self.trasladarObjToPosFinal():
+			self.t_trasladarObjToPosFinal_to_soltarObjeto.emit()
 		pass
 
 	#
 	# sm_dejarObjeto
 	#
 	@QtCore.Slot()
-	def sm_dejarObjeto(self):
-		print("Entered state dejarObjeto")
-		if self.dejarObjeto():
-			self.t_dejarObjeto_to_inicializar.emit()
+	def sm_soltarObjeto(self):
+		print("Entered state soltarObjeto")
+		if self.soltarObjeto():
+			self.t_soltarObjeto_to_inicializar.emit()
 		pass
 
 	#
@@ -209,7 +252,7 @@ class SpecificWorker(GenericWorker):
 		pass
 
 
-# =================================================================
+# ==================== SUBSCRIPTION ===============================
 # =================================================================
 	#
 	# SUBSCRIPTION to pushRGBD method from CameraRGBDSimplePub interface

@@ -41,6 +41,7 @@ class SpecificWorker(GenericWorker):
 		self.pivote = self.client.simxGetObjectHandle('PivoteApproach', self.client.simxServiceCall())[1]
 		self.biela = self.client.simxGetObjectHandle('BielaApproach', self.client.simxServiceCall())[1]
 		self.base = self.client.simxGetObjectHandle('gen3', self.client.simxServiceCall())[1]
+		self.gripper = self.client.simxGetObjectHandle('RG2_openCloseJoint', self.client.simxServiceCall())[1]
 		#self.camera_arm = self.client.simxGetObjectHandle('Camera_Arm', self.client.simxServiceCall())[1]
 		self.camera_arm = self.client.simxGetObjectHandle('camera_in_hand', self.client.simxServiceCall())[1]
 		
@@ -117,22 +118,54 @@ class SpecificWorker(GenericWorker):
 		import time
 		import numpy as np
 		print("Entrando moverse a biela")
+		
+		callFunction = True
+		PosIncio = np.array(self.client.simxGetObjectPose(self.target, self.base, self.client.simxServiceCall())[1])
 		while True:
-			self.client.simxCallScriptFunction("moveToObjectHandle@gen3", 1,self.biela,self.client.simxServiceCall())
+			#es necesario volver a llamar a la funcion (posibles perdidas en la llamada)
+			if callFunction:
+				self.client.simxCallScriptFunction("moveToObjectHandle@gen3", 1,self.biela,self.client.simxServiceCall())
+
+			#leemos los valores de los dummies
 			PosActual = self.client.simxGetObjectPose(self.target, self.base, self.client.simxServiceCall())[1]
 			PosObj = self.client.simxGetObjectPose(self.biela, self.base, self.client.simxServiceCall())[1]
-			result = np.abs(np.array(PosActual) - np.array(PosObj))
-			print(PosActual, PosObj, result)
-			if(result[0] < 0.1 and result[1] < 0.1 and result[2] < 0.1 ):
+			
+			#comprobamos que se ha llamado a la funcion correctamente (es decir el brazo se mueve)
+			resultMovimiento = np.abs(np.array(PosActual) - np.array(PosIncio))
+			if(callFunction and resultMovimiento[0] > 0.001 or resultMovimiento[1] > 0.001 or resultMovimiento[2] > 0.001):
+				callFunction = False
+
+			#comprobamos que ha llegado al destino
+			resultDestino = np.abs(np.array(PosActual) - np.array(PosObj))
+			if(resultDestino[0] < 0.001 and resultDestino[1] < 0.001 and resultDestino[2] < 0.001 and 
+				resultDestino[3] < 0.001 and resultDestino[4] < 0.001 and resultDestino[5] < 0.001):
 				break
-		time.sleep(20)
+
 		print("Saliendo moverse a biela")
-		
+		time.sleep(5)
+
 		print("Entrando cerrando pinzas")
-		self.client.simxCallScriptFunction("closeGripper@gen3", 1,0,self.client.simxServiceCall())
-		print("Saliendo cerrando pinzas")
-		time.sleep(20)
 		
+		percentajeOpen = posInicial = self.client.simxGetJointPosition(self.gripper, self.client.simxServiceCall())[1]
+		callFunction = True
+		while True:
+			#se llama a la funcion
+			if callFunction: 
+				result = self.client.simxCallScriptFunction("closeGripper@gen3", 1,0,self.client.simxServiceCall())
+				#se determina si se llama otra vez a la funcion o no
+				if (abs(result[1] - posInicial) > 0.005):
+					callFunction = False
+			#la pinza se ha terminado de cerrar o abrir
+			if(abs(percentajeOpen - self.client.simxGetJointPosition(self.gripper, self.client.simxServiceCall())[1]) < 0.0001):
+				break
+			#actualizamos el porcentaje de apertura
+			percentajeOpen = self.client.simxGetJointPosition(self.gripper, self.client.simxServiceCall())[1]
+
+		
+		
+		time.sleep(5)
+		
+		'''
 		while True:
 			self.client.simxCallScriptFunction("moveToObjectHandle@gen3", 1,self.pivote,self.client.simxServiceCall())
 			PosActual = self.client.simxGetObjectPose(self.target, self.base, self.client.simxServiceCall())[1]
@@ -147,6 +180,7 @@ class SpecificWorker(GenericWorker):
 		self.client.simxCallScriptFunction("openGripper@gen3", 1,0,self.client.simxServiceCall())
 		print("Saliendo abriendo pinzas")
 		time.sleep(20)
+		'''
 		
 
 		
