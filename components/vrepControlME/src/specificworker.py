@@ -113,13 +113,14 @@ class SpecificWorker(GenericWorker):
 			#actualizamos el porcentaje de apertura
 			percentajeOpen = self.client.simxGetJointPosition(self.gripper, self.client.simxServiceCall())[1]
 
+	'''
 	def moverBrazo(self, DummyDestino):
 		#ponemos el brazo en la posicion de inicio
 		callFunction = True
 		PosIncio = np.array(self.client.simxGetObjectPose(self.target, self.base, self.client.simxServiceCall())[1])
 		while True:
 			#es necesario volver a llamar a la funcion? (posibles perdidas en la llamada)
-			if callFunction:
+			if True:#callFunction:
 				self.client.simxCallScriptFunction("moveToObjectHandle@gen3", 1,DummyDestino,self.client.simxServiceCall())
 
 			#leemos los valores de los dummys
@@ -136,6 +137,27 @@ class SpecificWorker(GenericWorker):
 			if(resultDestino[0] < 0.0001 and resultDestino[1] < 0.0001 and resultDestino[2] < 0.0001 and 
 				resultDestino[3] < 0.0001 and resultDestino[4] < 0.0001 and resultDestino[5] < 0.0001):
 				break
+	'''
+
+	def moverBrazo(self, DummyDestino, speed):
+		while True:
+			#leemos los valores de los dummys
+			PosActual = self.client.simxGetObjectPose(self.target, self.base, self.client.simxServiceCall())[1]
+			PosObj = self.client.simxGetObjectPose(DummyDestino, self.base, self.client.simxServiceCall())[1]
+			
+			#Calculamos la posición a la que moverse
+			coords = self.client.simxGetObjectPosition(DummyDestino, self.base, self.client.simxServiceCall())[1]
+			coords[0] = coords[0] if abs(coords[0]-PosActual[0])<speed else PosActual[0]+speed if coords[0]-PosActual[0]>0 else PosActual[0]-speed
+			coords[1] = coords[1] if abs(coords[1]-PosActual[1])<speed else PosActual[1]+speed if coords[1]-PosActual[1]>0 else PosActual[1]-speed
+			coords[2] = coords[2] if abs(coords[2]-PosActual[2])<speed else PosActual[2]+speed if coords[2]-PosActual[2]>0 else PosActual[2]-speed
+			
+			self.client.simxSetObjectPosition(self.target, self.base, coords, self.client.simxServiceCall())
+			#time.sleep(0.01)
+
+			#comprobamos que ha llegado al destino
+			resultDestino = np.abs(np.array(PosActual) - np.array(PosObj))
+			if(resultDestino[0] < 0.1 and resultDestino[1] < 0.1 and resultDestino[2] < 0.1):
+				break
 
 
 			
@@ -143,7 +165,7 @@ class SpecificWorker(GenericWorker):
 	# ===================================================================
 	def iniciarlizarBrazo(self):
 		self.gripperMovement(close=False)
-		self.moverBrazo(self.home)
+		self.moverBrazo(self.home, 0.05)
 		return True
 	
 	def detectarObjetos(self):
@@ -163,7 +185,7 @@ class SpecificWorker(GenericWorker):
 			return False
 			
 	def moverBrazoToObj(self):
-		self.moverBrazo(self.biela)
+		self.moverBrazo(self.biela, 0.05)
 		return True
 
 
@@ -172,7 +194,7 @@ class SpecificWorker(GenericWorker):
 		return True
 
 	def trasladarObjToPosFinal(self):
-		self.moverBrazo(self.pivote)
+		self.moverBrazo(self.pivote, 0.05)
 		return True
 
 	def soltarObjeto(self):
