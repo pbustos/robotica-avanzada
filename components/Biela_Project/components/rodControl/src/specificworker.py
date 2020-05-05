@@ -23,6 +23,8 @@ from genericworker import *
 import cv2
 import numpy as np
 import math
+import vrep
+import b0RemoteApi
 # If RoboComp was compiled with Python bindings you can use InnerModel in Python
 # sys.path.append('/opt/robocomp/lib')
 # import librobocomp_qmat
@@ -34,6 +36,13 @@ class SpecificWorker(GenericWorker):
 		super(SpecificWorker, self).__init__(proxy_map)
 		self.Period = 2000
 		self.timer.start(self.Period)
+
+		self.client = b0RemoteApi.RemoteApiClient('b0RemoteApi_pythonClient-2','b0RemoteApiAddOn')
+		self.target = self.client.simxGetObjectHandle('target', self.client.simxServiceCall())[1]
+		self.target0 = self.client.simxGetObjectHandle('target0', self.client.simxServiceCall())[1]
+		self.base = self.client.simxGetObjectHandle('UR3', self.client.simxServiceCall())[1]
+		self.biela = self.client.simxGetObjectHandle('Shape5', self.client.simxServiceCall())[1]
+		self.pinza = self.client.simxGetObjectHandle('Camera_hand', self.client.simxServiceCall())[1]
 
 		self.rodMachine.start()
 
@@ -67,22 +76,38 @@ class SpecificWorker(GenericWorker):
 		img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 		# change image to grey and call HoughCircles
 		grayImage     = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
-		circlesImage  = cv2.HoughCircles(grayImage, cv2.HOUGH_GRADIENT, 1.2, 100)
-		print(circlesImage[0])
-		
-		for (x, y, r) in circlesImage[0]:
-			x = math.ceil(x)
-			y = math.ceil(y)
-			r = math.ceil(r)
-			print("x: ", x)
-			print("y: ", y)
-			print("r: ", r)
-			cv2.circle(img, (x, y), r, (255, 255, 255), 4)
-			cv2.rectangle(img, (x - 5, y - 5), (x + 5, y + 5), (0, 128, 255), -1)
-    		# draw the circle in the output image, then draw a rectangle
-    		# corresponding to the center of the circle
-		cv2.imshow("Camera_hand", img)
-		cv2.waitKey(5)
+		circlesImage  = cv2.HoughCircles(grayImage, cv2.HOUGH_GRADIENT, 1.2, 100)		
+		if circlesImage is not None:
+			for (x, y, r) in circlesImage[0]:
+				x = math.ceil(x)
+				y = math.ceil(y)
+				r = math.ceil(r)
+				self.keypoint = [x, y]
+				print(self.keypoint, " ", r)
+				cv2.circle(img, (x, y), r, (255, 255, 255), 4)
+				cv2.rectangle(img, (x - 5, y - 5), (x + 5, y + 5), (0, 128, 255), -1)
+				cv2.imshow("Camera_hand", img)
+				cv2.waitKey(5)
+			return True
+		else:
+			return False
+
+
+	@QtCore.Slot()
+	def moveArm(self):
+		depth_ = self.camerargbdsimple_proxy.getDepth()
+		self.depth = np.frombuffer(depth_.depth, dtype=np.float32).reshape(depth_.height, depth_.width)
+		ki = self.keypoint[0] - 320
+		kj = 240 - self.keypoint[1]
+		pdepth = float(self.depth[self.keypoint[0]][self.keypoint[1]])
+
+		if pdepth < 10000 and pdepth > 0:
+			self.keypoint.append(pdepth)
+			self.keypoint[0] = ki * self.keypoint[2] / 462
+			self.keypoint[1] = kj * self.keypoint[2] / 462
+			print("keypoint: ", self.keypoint)
+			print("ki: ", ki, " kj: ", kj)
+			movement = self.client.simxSetObjectPosition(self.target, self.target, self.keypoint, self.client.simxServiceCall())		
 		return True
 
 # =============== Slots methods for State Machine ===================
@@ -104,9 +129,9 @@ class SpecificWorker(GenericWorker):
 	@QtCore.Slot()
 	def sm_detectCircle(self):
 		print("Entered state detectCircle")
-		while(not self.detectCircle()):
-			pass
-
+		while(True):
+			if self.detectCircle():
+				break
 		self.t_detectCircle_to_moveArm.emit()
 
 		pass
@@ -117,6 +142,7 @@ class SpecificWorker(GenericWorker):
 	@QtCore.Slot()
 	def sm_dropRod(self):
 		print("Entered state dropRod")
+		self.moveArm()
 		self.t_dropRod_to_finalize.emit()
 		pass
 
