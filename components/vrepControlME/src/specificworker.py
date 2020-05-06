@@ -35,7 +35,7 @@ class SpecificWorker(GenericWorker):
 		self.timer.start(self.Period)
 
 		# Connect to VREP IK
-		self.client = b0RemoteApi.RemoteApiClient('b0RemoteApi_pythonClient','b0RemoteApiAddOn', timeout=5)
+		self.client = b0RemoteApi.RemoteApiClient('b0RemoteApi_pythonClient','b0RemoteApiAddOn', timeout=60)
 		self.target = self.client.simxGetObjectHandle('target', self.client.simxServiceCall())[1]
 		self.pivote = self.client.simxGetObjectHandle('PivoteApproach', self.client.simxServiceCall())[1]
 		self.biela = self.client.simxGetObjectHandle('BielaApproach', self.client.simxServiceCall())[1]
@@ -120,11 +120,12 @@ class SpecificWorker(GenericWorker):
 		#ponemos el brazo en la posicion de inicio
 		callFunction = True
 		PosIncio = np.array(self.client.simxGetObjectPose(self.target, self.base, self.client.simxServiceCall())[1])
+		result = 0
 		while True:
 			#es necesario volver a llamar a la funcion? (posibles perdidas en la llamada)
-			if callFunction:
+			if result!=1: #callFunction
 				try:
-					self.client.simxCallScriptFunction(funcionMovimiento+"@gen3", 1,DummyDestino,self.client.simxServiceCall())
+					result = self.client.simxCallScriptFunction(funcionMovimiento+"@gen3", 1,DummyDestino,self.client.simxServiceCall())[1]
 				except:
 					pass
 			#leemos los valores de los dummys
@@ -141,7 +142,6 @@ class SpecificWorker(GenericWorker):
 			if(resultDestino[0] < 0.0001 and resultDestino[1] < 0.0001 and resultDestino[2] < 0.0001 and 
 				resultDestino[3] < 0.0001 and resultDestino[4] < 0.0001 and resultDestino[5] < 0.0001):
 				break
-
 
 			
 	# =============== Metodos Estados ===================================
