@@ -47,6 +47,16 @@ class SpecificWorker(GenericWorker):
 		self.Maq1FirtsMovement.start()
 		self.destroyed.connect(self.t_soltarObjeto_to_finalizar)
 
+		#clase enumerada
+		self.enumerateOperation = {"MoveToHome" : 1, 
+								   "MoveToRod" : 2, 
+								   "MoveToPivote" : 3, 
+								   "CloseGripper" : 4, 
+								   "OpenGripper" : 5}
+
+		#abrimos las pinzas
+		self.gripperMovement(self.enumerateOperation["OpenGripper"])
+
 		self.JOYSTICK_EVENT = False
 		print("Leaving Init")
 
@@ -90,7 +100,7 @@ class SpecificWorker(GenericWorker):
 		except Ice.Exception as ex:
 			print(ex)
 
-	def gripperMovement(self, close=False):
+	def gripperMovement(self, intNumberFunction):
 		#abrimos pinzas para soltar el objeto
 		percentajeOpen = posInicial = self.client.simxGetJointPosition(self.gripper, self.client.simxServiceCall())[1]
 		callFunction = True
@@ -98,34 +108,30 @@ class SpecificWorker(GenericWorker):
 			#se llama a la funcion
 			if callFunction:
 				try:
-					if close:
-						result = self.client.simxCallScriptFunction("closeGripper@gen3", 1,0,self.client.simxServiceCall())
-					else:
-						result = self.client.simxCallScriptFunction("openGripper@gen3", 1,0,self.client.simxServiceCall())
+					self.client.simxCallScriptFunction("setFunction@gen3", 1, intNumberFunction,self.client.simxServiceCall())
 				except:
 					pass
 
 				#se determina si se llama otra vez a la funcion o no (la pinza se ha movido algo)
-				if (abs(result[1] - posInicial) > 0.005):
+				if (abs(self.client.simxGetJointPosition(self.gripper, self.client.simxServiceCall())[1] - posInicial) > 0.005):
 					callFunction = False
 			
 			#la pinza se ha terminado de cerrar o abrir?
-			if(abs(percentajeOpen - self.client.simxGetJointPosition(self.gripper, self.client.simxServiceCall())[1]) < 0.0001):
+			if(not callFunction and abs(percentajeOpen - self.client.simxGetJointPosition(self.gripper, self.client.simxServiceCall())[1]) < 0.003):
 				break
 			
 			#actualizamos el porcentaje de apertura
 			percentajeOpen = self.client.simxGetJointPosition(self.gripper, self.client.simxServiceCall())[1]
 
-	def moverBrazo(self, DummyDestino, funcionMovimiento):
+	def moverBrazo(self, DummyDestino, intNumberFunction):
 		#ponemos el brazo en la posicion de inicio
 		callFunction = True
 		PosIncio = np.array(self.client.simxGetObjectPose(self.target, self.base, self.client.simxServiceCall())[1])
-		result = 0
 		while True:
 			#es necesario volver a llamar a la funcion? (posibles perdidas en la llamada)
-			if result!=1: #callFunction
+			if callFunction:
 				try:
-					result = self.client.simxCallScriptFunction(funcionMovimiento+"@gen3", 1,DummyDestino,self.client.simxServiceCall())[1]
+					self.client.simxCallScriptFunction("setFunction@gen3", 1, intNumberFunction,self.client.simxServiceCall())[1]
 				except:
 					pass
 			#leemos los valores de los dummys
@@ -134,21 +140,18 @@ class SpecificWorker(GenericWorker):
 			
 			#comprobamos que se ha llamado a la funcion correctamente (es decir el brazo se mueve)
 			resultMovimiento = np.abs(np.array(PosActual) - np.array(PosIncio))
-			if(callFunction and resultMovimiento[0] > 0.001 or resultMovimiento[1] > 0.001 or resultMovimiento[2] > 0.001):
+			if(callFunction and resultMovimiento[0] > 0.01 or resultMovimiento[1] > 0.01 or resultMovimiento[2] > 0.01):
 				callFunction = False
 
 			#comprobamos que ha llegado al destino
 			resultDestino = np.abs(np.array(PosActual) - np.array(PosObj))
-			if(resultDestino[0] < 0.0001 and resultDestino[1] < 0.0001 and resultDestino[2] < 0.0001 and 
-				resultDestino[3] < 0.0001 and resultDestino[4] < 0.0001 and resultDestino[5] < 0.0001):
+			if(resultDestino[0] < 0.01 and resultDestino[1] < 0.01 and resultDestino[2] < 0.01):
 				break
-
 			
 	# =============== Metodos Estados ===================================
 	# ===================================================================
 	def iniciarlizarBrazo(self):
-		self.gripperMovement(close=False)
-		self.moverBrazo(self.home, "moveToObjectHandle")
+		self.moverBrazo(self.home, self.enumerateOperation["MoveToHome"])
 		return True
 	
 	def detectarObjetos(self):
@@ -168,20 +171,20 @@ class SpecificWorker(GenericWorker):
 			return False
 			
 	def moverBrazoToObj(self):
-		self.moverBrazo(self.biela, "moveToMovingRod")
+		self.moverBrazo(self.biela, self.enumerateOperation["MoveToRod"])
 		return True
 
 
 	def cogerObjeto(self):
-		self.gripperMovement(close=True)
+		self.gripperMovement(self.enumerateOperation["CloseGripper"])
 		return True
 
 	def trasladarObjToPosFinal(self):
-		self.moverBrazo(self.pivote, "moveToObjectHandle")
+		self.moverBrazo(self.pivote, self.enumerateOperation["MoveToPivote"])
 		return True
 
 	def soltarObjeto(self):
-		self.gripperMovement(close=False)
+		self.gripperMovement(self.enumerateOperation["OpenGripper"])
 		return True
 
 # =============== Slots methods for State Machine ===================
@@ -293,4 +296,4 @@ class SpecificWorker(GenericWorker):
 			else:
 				self.joystickVector['z'] = [axis.value for axis in data.axes if axis.name == "z"][0] / 10.0
 			
-			self.JOYSTICK_EVENT = True
+			self.JOYSTICK_EVENT = True	
