@@ -69,10 +69,12 @@ class SpecificWorker(GenericWorker):
 	# =============== Metodos Auxiliares ================================
 	# ===================================================================
 	def detectCircles(self, orig):
+		gaussWidth = 5
+		orig = cv2.GaussianBlur(orig, (gaussWidth, gaussWidth), (gaussWidth/5), (gaussWidth/5))
 		gray = cv2.cvtColor(orig, cv2.COLOR_BGR2GRAY)
 		# detect circles in the image
 
-		circles = cv2.HoughCircles(gray, cv2.HOUGH_GRADIENT, 1.8, 100)
+		circles = cv2.HoughCircles(gray, cv2.HOUGH_GRADIENT, 1, 100)
 		# ensure at least some circles were found
 		if circles is not None:
 			print("Detected circle")
@@ -171,10 +173,12 @@ class SpecificWorker(GenericWorker):
 			return False
 			
 	def moverBrazoToObj(self):
-		try:
-			self.biela = self.client.simxCallScriptFunction("getActualBielaPython@gen3", 1, 0,self.client.simxServiceCall())[1]
-		except:
-			pass
+		callFunctionOk = False #hasta que no se realiza bien la llamada no se sale
+		while not callFunctionOk:
+			try:
+				callFunctionOk, self.biela = self.client.simxCallScriptFunction("getActualBielaPython@gen3", 1, 0,self.client.simxServiceCall())
+			except:
+				pass
 		self.moverBrazo(self.biela, self.enumerateOperation["MoveToRod"])
 		return True
 
