@@ -38,7 +38,7 @@ class SpecificWorker(GenericWorker):
 		self.client = b0RemoteApi.RemoteApiClient('b0RemoteApi_pythonClient','b0RemoteApiAddOn', timeout=60)
 		self.target = self.client.simxGetObjectHandle('target', self.client.simxServiceCall())[1]
 		self.pivote = self.client.simxGetObjectHandle('PivoteApproach', self.client.simxServiceCall())[1]
-		self.biela = self.client.simxGetObjectHandle('BielaApproach', self.client.simxServiceCall())[1]
+		self.biela = self.client.simxGetObjectHandle('BielaApproach0', self.client.simxServiceCall())[1]
 		self.home = self.client.simxGetObjectHandle('InitApproach', self.client.simxServiceCall())[1]
 		self.base = self.client.simxGetObjectHandle('gen3', self.client.simxServiceCall())[1]
 		self.camera_arm = self.client.simxGetObjectHandle('camera_in_hand', self.client.simxServiceCall())[1]
@@ -171,6 +171,10 @@ class SpecificWorker(GenericWorker):
 			return False
 			
 	def moverBrazoToObj(self):
+		try:
+			self.biela = self.client.simxCallScriptFunction("getActualBielaPython@gen3", 1, 0,self.client.simxServiceCall())[1]
+		except:
+			pass
 		self.moverBrazo(self.biela, self.enumerateOperation["MoveToRod"])
 		return True
 
