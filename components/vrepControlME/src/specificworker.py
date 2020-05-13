@@ -147,13 +147,33 @@ class SpecificWorker(GenericWorker):
 
 			#comprobamos que ha llegado al destino
 			resultDestino = np.abs(np.array(PosActual) - np.array(PosObj))
-			if(resultDestino[0] < 0.01 and resultDestino[1] < 0.01 and resultDestino[2] < 0.01):
+			if(resultDestino[0] < 0.015 and resultDestino[1] < 0.015 and resultDestino[2] < 0.015):
 				break
+
+			#comprobamos si es la biela para asegurar que esta dentro de la cinta
+			if(DummyDestino == self.biela):
+				self.checkPositionBiela()
+
+	def checkPositionBiela(self):
+		#x (ancho de la cinta), y(largo), z(altura)
+		PosActual = self.client.simxGetObjectPose(self.biela, -1, self.client.simxServiceCall())[1]
+		if (PosActual[1] < -0.50 and PosActual[1] > -2.17) and (PosActual[2] > 0.7): #esta en la cinta
+			return True
+		else:
+			callFunctionOk = False #hasta que no se realiza bien la llamada no se sale
+			while not callFunctionOk:
+				try:
+					callFunctionOk = self.client.simxCallScriptFunction("putBielaInTransporter@gen3", 1, 0,self.client.simxServiceCall())
+				except:
+					pass
+			return False
+
 			
 	# =============== Metodos Estados ===================================
 	# ===================================================================
 	def iniciarlizarBrazo(self):
 		self.moverBrazo(self.home, self.enumerateOperation["MoveToHome"])
+		self.checkPositionBiela()
 		return True
 	
 	def detectarObjetos(self):
@@ -165,6 +185,8 @@ class SpecificWorker(GenericWorker):
 		img, self.circles = self.detectCircles(img)
 		cv2.imshow("Gen3", img)
 		cv2.waitKey(1)
+
+		self.checkPositionBiela()
 
 		#hay alguna biela?
 		if self.circles is not None:
@@ -185,7 +207,8 @@ class SpecificWorker(GenericWorker):
 
 	def cogerObjeto(self):
 		self.gripperMovement(self.enumerateOperation["CloseGripper"])
-		return True
+		return self.checkPositionBiela()
+
 
 	def trasladarObjToPosFinal(self):
 		self.moverBrazo(self.pivote, self.enumerateOperation["MoveToPivote"])
@@ -236,7 +259,8 @@ class SpecificWorker(GenericWorker):
 		print("Entered state cogerObjeto")
 		if self.cogerObjeto():
 			self.t_cogerObjeto_to_trasladarObjToPosFinal.emit()
-
+		else:
+			self.t_cogerObjeto_to_moverBrazoToObj.emit()
 		pass
 
 	#
